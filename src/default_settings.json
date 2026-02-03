@@ -1,0 +1,78 @@
+{
+  "triggernade": {
+    "triggernade_hotkey": "",
+    "triggernade_repeat": false,
+    "triggernade_q_spam": false,
+    "trig_m1_hold": 65,
+    "trig_m2_hold": 51,
+    "trig_drag_speed": 8,
+    "trig_dc_delay": 10,
+    "trig_dc_throws": 10,
+    "trig_throw_delay": 100,
+    "trig_reconnect_after": 1,
+    "wait_before_espam": 0,
+    "espam_duration": 250,
+    "trig_m1_before_interweave": 1,
+    "wait_before_cycle": 100,
+    "trig_slot_pos": null,
+    "trig_drop_pos": null,
+    "trig_drag_start": null,
+    "trig_drag_end": null,
+    "wolfpack_m1_hold": 20,
+    "wolfpack_m1_gap": 20,
+    "wolfpack_dc_hold": 20,
+    "wolfpack_dc_gap": 600
+  },
+  "mine": {
+    "mine_hotkey": "",
+    "mine_repeat": false,
+    "mine_cook": 236,
+    "mine_dc_delay": 99,
+    "mine_drag_speed": 8,
+    "mine_pre_close": 100,
+    "mine_tab_hold": 80,
+    "mine_close_reconnect": 409,
+    "mine_click_delay": 7,
+    "mine_pickup_hold": 1336,
+    "mine_e_delay": 868,
+    "mine_loop_delay": 550,
+    "mine_reselect": true,
+    "mine_q_mode": "radial",
+    "mine_q_direction": "S",
+    "mine_nudge": true,
+    "mine_nudge_px": 50,
+    "mine_slot_pos": [3032, 1236],
+    "mine_drop_pos": [3171, 1593],
+    "mine_drag_start": [3032, 1236],
+    "mine_drag_end": [3171, 1593]
+  },
+  "snaphook": {
+    "snap_hotkey": "",
+    "snap_drag_start": null,
+    "snap_drag_end": null
+  },
+  "keycard": {
+    "keycard_hotkey": "",
+    "keycard_drag_start": null,
+    "keycard_drag_end": null
+  },
+  "disconnect": {
+    "dc_both_hotkey": "",
+    "dc_outbound_hotkey": "",
+    "dc_inbound_hotkey": "",
+    "tamper_hotkey": ""
+  },
+  "general": {
+    "stay_on_top": false,
+    "show_overlay": true,
+    "timing_variance": 0,
+    "stop_hotkey": "esc"
+  },
+  "appearance": {
+    "bg_color": "#1e1e1e",
+    "fg_color": "#e8f4f8",
+    "accent_color": "#00d4ff",
+    "card_bg_color": "#1a2f4d",
+    "transparency": 100
+  }
+}

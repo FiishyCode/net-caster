@@ -1,0 +1,6 @@
+keyboard
+pynput
+pydivert
+vgamepad
+pillow
+customtkinter

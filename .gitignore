@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.zip
+*.log
+.claude/
+Videos/
+*.c
+nul
+
+# PyInstaller output directories
+dist/
+build/build/
+build/Application/

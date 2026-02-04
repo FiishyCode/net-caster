@@ -21,87 +21,73 @@ class IndicatorManager:
         except:
             pass
     
+    def set_indicator_running(self, action_type):
+        """Set an indicator to 'Running' state with highlight color"""
+        indicator_map = {
+            'triggernade': 'trig_indicator',
+            'mine': 'mine_indicator',
+            'snaphook': 'snap_indicator',
+            'keycard': 'keycard_indicator',
+            'dc_both': 'dc_both_indicator'
+        }
+        indicator_name = indicator_map.get(action_type)
+        if indicator_name and hasattr(self.app, indicator_name):
+            indicator = getattr(self.app, indicator_name)
+            indicator.configure(text_color=self.app.colors['highlight'], text="Running")
+    
+    def set_indicator_ready(self, action_type):
+        """Reset an indicator to normal state (Ready or Not Set)"""
+        indicator_map = {
+            'triggernade': 'trig_indicator',
+            'mine': 'mine_indicator',
+            'snaphook': 'snap_indicator',
+            'keycard': 'keycard_indicator',
+            'dc_both': 'dc_both_indicator'
+        }
+        indicator_name = indicator_map.get(action_type)
+        if indicator_name and hasattr(self.app, indicator_name):
+            indicator = getattr(self.app, indicator_name)
+            is_recorded = self.app._is_action_recorded(action_type)
+            color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
+            text = "Ready" if is_recorded else "Not Set"
+            indicator.configure(text_color=color, text=text)
+    
     def update_all_indicators(self):
-        """Update all recording indicators (green if recorded, yellow if not)"""
+        """Update all recording indicators (shows 'Ready' or 'Not Set' with appropriate color)"""
         try:
             # Update DC Both indicator
             if hasattr(self.app, 'dc_both_indicator'):
                 is_recorded = self.app._is_action_recorded('dc_both')
                 color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-                if hasattr(self.app.dc_both_indicator, 'configure'):
-                    self.app.dc_both_indicator.configure(text_color=color)
-                else:
-                    self.app.dc_both_indicator.delete('all')
-                    self.app.dc_both_indicator.create_oval(2, 2, 10, 10, fill=color, outline='', width=0)
+                text = "Ready" if is_recorded else "Not Set"
+                self.app.dc_both_indicator.configure(text_color=color, text=text)
             
-            # Update Triggernade keybind indicator
-            if hasattr(self.app, 'trig_keybind_indicator'):
-                is_recorded = bool(self.app.config.get("triggernade_hotkey", ""))
-                color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-                if hasattr(self.app.trig_keybind_indicator, 'configure'):
-                    self.app.trig_keybind_indicator.configure(text_color=color)
-                else:
-                    self.app.trig_keybind_indicator.delete('all')
-                    self.app.trig_keybind_indicator.create_oval(2, 2, 10, 10, fill=color, outline='', width=0)
-            
-            # Update Triggernade action indicator
+            # Update Triggernade indicator
             if hasattr(self.app, 'trig_indicator'):
                 is_recorded = self.app._is_action_recorded('triggernade')
                 color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-                if hasattr(self.app.trig_indicator, 'configure'):
-                    self.app.trig_indicator.configure(text_color=color)
-                else:
-                    self.app.trig_indicator.delete('all')
-                    self.app.trig_indicator.create_oval(2, 2, 10, 10, fill=color, outline='', width=0)
+                text = "Ready" if is_recorded else "Not Set"
+                self.app.trig_indicator.configure(text_color=color, text=text)
             
-            # Update Mine keybind indicator
-            if hasattr(self.app, 'mine_keybind_indicator'):
-                is_recorded = bool(self.app.config.get("mine_hotkey", ""))
-                color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-                if hasattr(self.app.mine_keybind_indicator, 'configure'):
-                    self.app.mine_keybind_indicator.configure(text_color=color)
-                else:
-                    self.app.mine_keybind_indicator.delete('all')
-                    self.app.mine_keybind_indicator.create_oval(2, 2, 10, 10, fill=color, outline='', width=0)
-            
-            # Update Mine action indicator
+            # Update Mine indicator
             if hasattr(self.app, 'mine_indicator'):
                 is_recorded = self.app._is_action_recorded('mine')
                 color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-                if hasattr(self.app.mine_indicator, 'configure'):
-                    self.app.mine_indicator.configure(text_color=color)
-                else:
-                    self.app.mine_indicator.delete('all')
-                    self.app.mine_indicator.create_oval(2, 2, 10, 10, fill=color, outline='', width=0)
-            
-            # Update Stop indicator
-            if hasattr(self.app, 'stop_indicator'):
-                is_recorded = self.app._is_action_recorded('stop')
-                color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-                if hasattr(self.app.stop_indicator, 'configure'):
-                    self.app.stop_indicator.configure(text_color=color)
-                else:
-                    self.app.stop_indicator.delete('all')
-                    self.app.stop_indicator.create_oval(2, 2, 10, 10, fill=color, outline='', width=0)
+                text = "Ready" if is_recorded else "Not Set"
+                self.app.mine_indicator.configure(text_color=color, text=text)
             
             # Update Snaphook indicator
             if hasattr(self.app, 'snap_indicator'):
                 is_recorded = self.app._is_action_recorded('snaphook')
                 color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-                if hasattr(self.app.snap_indicator, 'configure'):
-                    self.app.snap_indicator.configure(text_color=color)
-                else:
-                    self.app.snap_indicator.delete('all')
-                    self.app.snap_indicator.create_oval(2, 2, 10, 10, fill=color, outline='', width=0)
+                text = "Ready" if is_recorded else "Not Set"
+                self.app.snap_indicator.configure(text_color=color, text=text)
             
             # Update Keycard indicator
             if hasattr(self.app, 'keycard_indicator'):
                 is_recorded = self.app._is_action_recorded('keycard')
                 color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-                if hasattr(self.app.keycard_indicator, 'configure'):
-                    self.app.keycard_indicator.configure(text_color=color)
-                else:
-                    self.app.keycard_indicator.delete('all')
-                    self.app.keycard_indicator.create_oval(2, 2, 10, 10, fill=color, outline='', width=0)
+                text = "Ready" if is_recorded else "Not Set"
+                self.app.keycard_indicator.configure(text_color=color, text=text)
         except Exception as e:
             print(f"[ERROR] Failed to update indicators: {e}")

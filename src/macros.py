@@ -29,6 +29,7 @@ class MacroExecutor:
             self.app.triggernade_running = False
             self.app.root.after(0, lambda: self.app.triggernade_status_var.set("Ready"))
             self.app.root.after(0, lambda: self.app.triggernade_status_label.configure(foreground="gray"))
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('triggernade'))
             return
 
         # Validate DC Both hotkey is set if looping is enabled
@@ -37,6 +38,7 @@ class MacroExecutor:
             self.app.triggernade_running = False
             self.app.root.after(0, lambda: self.app.triggernade_status_var.set("Ready"))
             self.app.root.after(0, lambda: self.app.triggernade_status_label.configure(foreground="gray"))
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('triggernade'))
             return
 
         print(f"[TRIGGERNADE] Using positions: {self.app.trig_drag_start} → {self.app.trig_drag_end}")
@@ -48,6 +50,9 @@ class MacroExecutor:
         pynput_keyboard.release('e')
         pynput_keyboard.release('q')
         pynput_keyboard.release(Key.tab)
+
+        # Reset throw counter at start
+        self.app.root.after(0, lambda: self.app._ensure_overlay().reset_throw_counter())
 
         # Brief delay so starting hotkey doesn't trigger stop
         time.sleep(0.2)
@@ -72,6 +77,9 @@ class MacroExecutor:
             print(f"Throw (M1:{m1_hold}ms) + M2:{m2_hold}ms")
 
             pynput_mouse.release(MouseButton.left)
+            
+            # Increment throw counter
+            self.app.root.after(0, lambda: self.app._ensure_overlay().update_throw_counter(increment=True))
 
             # ===== Delay before disconnect =====
             dc_delay = self.app.trig_dc_delay_var.get()
@@ -142,6 +150,12 @@ class MacroExecutor:
                 time.sleep(0.015)
                 pynput_mouse.release(MouseButton.left)
                 time.sleep(0.010)
+            
+            # If not looping, stop here after single throw
+            if not repeat:
+                print(f"Single throw complete!")
+                return
+
             print(f"Starting wolfpack loop!")
 
             # ===== WOLFPACK LOOP SECTION =====
@@ -189,12 +203,18 @@ class MacroExecutor:
             click_thread.start()
 
             # Even DC cycle
+            dc_cycle_count = 0
             while True:
                 pynput_keyboard.press(dc_key)
                 is_disconnected = True
                 time.sleep(dc_hold)
                 pynput_keyboard.release(dc_key)
                 is_disconnected = False
+                
+                # Count every 2 DC cycles (matches actual throw rate better)
+                dc_cycle_count += 1
+                if dc_cycle_count % 2 == 0:
+                    self.app.root.after(0, lambda: self.app._ensure_overlay().update_throw_counter(increment=True))
 
                 if self.app.triggernade_stop:
                     click_running[0] = False
@@ -229,6 +249,7 @@ class MacroExecutor:
             self.app.triggernade_stop = False
             self.app.root.after(0, lambda: self.app.triggernade_status_var.set("Ready"))
             self.app.root.after(0, lambda: self.app.triggernade_status_label.configure(foreground="gray"))
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('triggernade'))
             self.app.root.after(0, lambda: self.app.show_overlay("Wolfpack stopped."))
     
     def run_mine_macro(self):
@@ -290,26 +311,30 @@ class MacroExecutor:
                 print(f"[{cycle}] M1 press - cooking for {cook_time}ms...")
                 pynput_mouse.press(MouseButton.left)
 
-                # 2. Cook time: wait before TAB press (open inventory while still holding M1!)
+                # 2. Cook time: hold M1 to cook the mine
                 self.app.vsleep(cook_time)
+                
+                # 3. Release M1 FIRST so server registers placement
+                pynput_mouse.release(MouseButton.left)
+                print(f"[{cycle}] M1 release - mine placed after {cook_time}ms cook")
+                
+                # 4. Small delay to ensure mine placement registered
+                self.app.vsleep(80)
+                
+                # 5. TAB press to open inventory
                 pynput_keyboard.press(Key.tab)
-                print(f"[{cycle}] TAB press after {cook_time}ms cook (inventory opening, M1 still held)")
+                print(f"[{cycle}] TAB press - opening inventory")
 
-                # 3. DC delay: wait before DC (while still holding M1!)
+                # 6. DC delay: wait before DC (inventory opening)
                 self.app.vsleep(dc_delay)
                 start_packet_drop(inbound=False)
                 is_disconnected = True
-                print(f"[{cycle}] DC started after {dc_delay}ms (M1 still held)")
+                print(f"[{cycle}] DC started after {dc_delay}ms")
 
-                # 4. ~24ms later: TAB release
+                # 7. TAB release shortly after DC
                 self.app.vsleep(24)
                 pynput_keyboard.release(Key.tab)
                 print(f"[{cycle}] TAB release")
-
-                # 5. ~326ms later: M1 release
-                self.app.vsleep(326)
-                pynput_mouse.release(MouseButton.left)
-                print(f"[{cycle}] M1 release - cook done")
 
                 if self.app.mine_stop:
                     break
@@ -420,10 +445,11 @@ class MacroExecutor:
             self.app.mine_stop = False
             self.app.root.after(0, lambda: self.app.mine_status_var.set("Ready"))
             self.app.root.after(0, lambda: self.app.mine_status_label.configure(foreground="gray"))
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('mine'))
             self.app.root.after(0, lambda: self.app.show_overlay("Mine Dupe stopped."))
     
     def execute_snap_action(self):
-        """Execute the snaphook action: open inv, drag item, close inv"""
+        """Execute the snaphook action: open inv, drag item, close inv - optimized for speed"""
         from pynput.mouse import Controller as MouseController, Button as MouseButton
         from pynput.keyboard import Controller as KeyboardController, Key
         import time
@@ -435,36 +461,38 @@ class MacroExecutor:
             print(f"[SNAPHOOK] Opening inventory...")
             # Open inventory (TAB key)
             pynput_keyboard.press(Key.tab)
-            time.sleep(0.05)
+            time.sleep(0.02)
             pynput_keyboard.release(Key.tab)
-            time.sleep(0.3)  # Wait for inventory to open
+            time.sleep(0.08)  # Minimal wait for inventory
             
             print(f"[SNAPHOOK] Dragging from {self.app.snap_drag_start} to {self.app.snap_drag_end}")
-            # Move to start position and wait
+            # Move to start position
             pynput_mouse.position = self.app.snap_drag_start
-            time.sleep(0.05)
+            time.sleep(0.02)
             
-            # Press and hold, then drag with curve
+            # Press and drag immediately
             pynput_mouse.press(MouseButton.left)
-            time.sleep(0.05)  # Hold for a moment before dragging
+            time.sleep(0.02)
             
-            # Use curved drag like the other actions
-            self.app.curved_drag(self.app.snap_drag_start, self.app.snap_drag_end, steps=20, step_delay=5)
+            # Fast drag
+            self.app.curved_drag(self.app.snap_drag_start, self.app.snap_drag_end, steps=12, step_delay=3)
             
             # Release after drag completes
             pynput_mouse.release(MouseButton.left)
-            time.sleep(0.1)
+            time.sleep(0.03)
             
             print(f"[SNAPHOOK] Closing inventory...")
             # Close inventory (TAB key)
             pynput_keyboard.press(Key.tab)
-            time.sleep(0.05)
+            time.sleep(0.02)
             pynput_keyboard.release(Key.tab)
             
             print(f"[SNAPHOOK] Complete!")
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('snaphook'))
             self.app.root.after(0, lambda: self.app.show_overlay("Snaphook complete!", force=True))
         except Exception as e:
             print(f"[SNAPHOOK] Error: {e}")
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('snaphook'))
             self.app.root.after(0, lambda: self.app.show_overlay(f"Snaphook error: {e}", force=True))
     
     def execute_keycard_action(self):
@@ -521,9 +549,11 @@ class MacroExecutor:
             time.sleep(0.1)
             
             print(f"[KEYCARD] Complete!")
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('keycard'))
             self.app.root.after(0, lambda: self.app.show_overlay("Keycard dupe complete!", force=True))
         except Exception as e:
             print(f"[KEYCARD] Error: {e}")
             if is_disconnected:
                 stop_packet_drop()
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('keycard'))
             self.app.root.after(0, lambda: self.app.show_overlay(f"Keycard error: {e}", force=True))

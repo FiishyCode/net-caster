@@ -9,9 +9,8 @@ class HotkeyRecordingHandler:
         self.app = app_instance
     
     def on_key_press(self, event):
-        print(f"[DEBUG] on_key_press called: key={event.keysym}, recording_stop={self.app.recording_stop}")
+        # Check if any recording is active
         if not self.app.recording_triggernade and not self.app.recording_mine and not self.app.recording_snap and not self.app.recording_keycard and not self.app.recording_dc_both and not self.app.recording_dc_outbound and not self.app.recording_dc_inbound and not self.app.recording_tamper and not self.app.recording_stop:
-            print("[DEBUG] on_key_press: early return - no recording flags set")
             return
 
         # Use keyboard library to check modifiers (tkinter state flags are unreliable)

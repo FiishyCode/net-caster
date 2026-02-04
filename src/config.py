@@ -7,14 +7,8 @@ import subprocess
 
 # =============================================================================
 # OBFUSCATION FEATURES (opt-in: requires "obfuscate" file next to exe)
-# NOTE IF YOU SEE THIS, AND YOU TOOK THE TIME TO READ THE CODE AND
-# LEARN ABOUT THE OBFUSCATE FEATURE, PLEASE DO NOT MENTION IT IN THE CHAT
-# INSTEAD, SIMPLY UTILIZE IT IF YOU WISH, WHILE NOTING THAT IN THE WORLD
-# OF CAT AND MOUSE THAT IS EXPLOITS VS ANTICHEATS, AN ACT TO AVOID DETECTION
-# CAN BE THE CATALYST THAT CAUSES DETECTION ITSELF, SUCH IS LIFE
-# USING ANY EXPLOIT IN ANY WAY IS ALWAYS A RISK.
-#                              -LOVE, 
-#                               KILLINMESMALLS/YOUSTAYGOLD/YOUR FATHER
+# This feature allows runtime name randomization for additional privacy.
+# Using exploits always carries risk - use at your own discretion.
 # =============================================================================
 # Unique build identifier - generated fresh each build by build.py
 BUILD_ID = "__BUILD_ID_PLACEHOLDER__"

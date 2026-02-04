@@ -11,3 +11,37 @@ nul
 dist/
 build/build/
 build/Application/
+
+# Backup and test files (may contain sensitive info)
+*_backup.py
+*_obfus.py
+test_*.py
+*.bak
+*.tmp
+
+# Config files (may contain user-specific settings)
+config.json
+*.json.bak
+
+# Build artifacts
+*.spec.bak
+*.exe
+*.dll
+*.sys
+*.lib
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Obfuscation marker files
+obfuscate
+DELETETOCHANGEID

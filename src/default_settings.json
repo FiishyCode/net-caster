@@ -69,10 +69,10 @@
     "stop_hotkey": "esc"
   },
   "appearance": {
-    "bg_color": "#1e1e1e",
-    "fg_color": "#e8f4f8",
-    "accent_color": "#00d4ff",
-    "card_bg_color": "#1a2f4d",
+    "bg_color": "#0f1419",
+    "fg_color": "#e4e7eb",
+    "accent_color": "#8080c0",
+    "card_bg_color": "#1a1f2e",
     "transparency": 100
   }
 }

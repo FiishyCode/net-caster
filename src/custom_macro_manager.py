@@ -600,6 +600,6 @@ class CustomMacroManager:
         threading.Thread(target=playback, daemon=True).start()
     
     def build_macro_tabs(self):
-        """Build macro tab buttons - placeholder, actual implementation may be in UI builder"""
-        if hasattr(self.app, '_build_macro_tabs'):
-            self.app._build_macro_tabs()
+        """Build macro tab buttons via UI builder"""
+        if hasattr(self.app, 'ui_builder') and hasattr(self.app.ui_builder, '_build_macro_tabs'):
+            self.app.ui_builder._build_macro_tabs()

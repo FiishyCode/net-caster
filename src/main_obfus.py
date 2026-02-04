@@ -727,7 +727,7 @@ class MainApp:
             pass
 
         # Title label
-        title_label = tk.Label(title_bar, text=APP_NAME[:6], bg=self.colors['bg_light'],
+        title_label = tk.Label(title_bar, text="Net Caster v1.0", bg=self.colors['bg_light'],
                                fg=self.colors['text'], font=('Arial', 10, 'bold'))
         title_label.pack(side='left', padx=2)
 

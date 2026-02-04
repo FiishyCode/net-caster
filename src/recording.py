@@ -221,7 +221,7 @@ class RecordingManager:
 
     def start_recording_stop(self):
         """Stop All is always ESC - recording disabled"""
-        print("[DEBUG] Stop All hotkey is fixed to ESC and cannot be changed")
+        # Stop All hotkey is fixed to ESC
         return
     
     def start_mine_drag_recording(self):

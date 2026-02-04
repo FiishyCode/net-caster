@@ -20,11 +20,13 @@ class PacketControlManager:
             # Reconnect
             stop_packet_drop()
             self.reset_dc_buttons()
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('dc_both'))
             self.app.root.after(0, lambda: self.app.show_overlay("RECONNECTED"))
         else:
             start_packet_drop(outbound=True, inbound=True)
             self.reset_dc_buttons()
             self.app.dc_both_btn.configure(text="RECONNECT", bg=self.app.colors['highlight'])
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_running('dc_both'))
             self.app.root.after(0, lambda: self.app.show_overlay("DC BOTH"))
     
     def toggle_dc_outbound(self):

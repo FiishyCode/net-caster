@@ -45,24 +45,24 @@ from pynput.mouse import Button as MouseButton
 class MainApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("NetCaster 2.0.0")
+        self.root.title("Net Caster v1.0")
         self.root.geometry("750x750")
         self.root.resizable(True, True)  # Allow resize
         
-        # Modern ocean-themed colors for NetCaster
+        # Modern dark theme with refined colors
         self.colors = {
-            'bg': '#0a1628',           # Deep ocean blue
-            'bg_light': '#162d4a',     # Lighter ocean blue
-            'bg_card': '#1a2f4d',      # Card background
-            'accent': '#1e3a5f',       # Mid ocean blue
-            'text': '#e8f4f8',         # Light cyan text
-            'text_dim': '#7a9cb5',     # Muted blue-grey
-            'highlight': '#00d4ff',    # Bright cyan
-            'success': '#00ff88',      # Bright green
-            'warning': '#ffd700',      # Gold/yellow
-            'recorded': '#00ff88',     # Green for recorded
-            'not_recorded': '#ffd700', # Yellow for not recorded
-            'hover': '#2a4a6f'         # Hover effect
+            'bg': '#0f1419',           # Deep dark background
+            'bg_light': '#1a1f2e',     # Slightly lighter for inputs
+            'bg_card': '#1a1f2e',      # Card background with subtle contrast
+            'accent': '#252a3a',       # Subtle accent for borders
+            'text': '#e4e7eb',         # Clean light text
+            'text_dim': '#9ca3af',     # Muted grey for secondary text
+            'highlight': '#8080c0',    # Purple/lavender accent
+            'success': '#10b981',      # Refined green
+            'warning': '#f59e0b',      # Refined amber
+            'recorded': '#10b981',     # Green for recorded
+            'not_recorded': '#f59e0b', # Amber for not recorded
+            'hover': '#2d3441'         # Subtle hover effect
         }
 
         # Configure window colors
@@ -855,234 +855,13 @@ class MainApp:
         self.keycard_drag_end = tuple(keycard_drag_e) if keycard_drag_e else None
         self._keycard_drag_started = False
 
-        # Stop All - HIDDEN (always uses ESC key, hard-coded)
-        stop_frame = ttk.Frame(frame)
-        # Don't pack the frame - keep it hidden
-        
-        # Force stop hotkey to always be "esc"
+        # Stop hotkey (always ESC, used internally for stopping macros)
         self.stop_hotkey_var = tk.StringVar(value="esc")
-        self.stop_hotkey_entry = tk.Entry(stop_frame, textvariable=self.stop_hotkey_var, width=15, state="readonly",
-                                          bd=0, highlightthickness=0, bg=self.colors['bg_light'], fg=self.colors['text'], readonlybackground=self.colors['bg_light'])
-        self.stop_record_btn = ttk.Button(stop_frame, text="Record", width=8, command=self.start_recording_stop)
-        
-        # Create indicator but don't show it (needed for update function)
-        self.stop_indicator = tk.Canvas(stop_frame, width=12, height=12, bg=self.colors['bg_card'], highlightthickness=0, bd=0)
-        self.stop_indicator.create_oval(2, 2, 10, 10, fill=self.colors['recorded'], outline='', width=0)
 
 
     def _build_appearance_tab(self):
         """Delegate to UI builder"""
         return self.ui_builder._build_appearance_tab()
-
-        # Window Options header
-        window_header = ctk.CTkLabel(
-            frame, 
-            text="Window Options",
-            font=("Segoe UI", 18, "bold"),
-            text_color=self.colors['highlight']
-        )
-        window_header.pack(pady=(15, 10), padx=20, anchor='w')
-
-        # Window options card
-        window_card = ctk.CTkFrame(
-            frame,
-            fg_color=self.colors['bg_card'],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.colors['accent']
-        )
-        window_card.pack(fill='x', padx=10, pady=8)
-        
-        window_content = ctk.CTkFrame(window_card, fg_color="transparent")
-        window_content.pack(fill='x', padx=15, pady=12)
-
-        # Stay on top
-        self.stay_on_top_var = tk.BooleanVar(value=self.config.get("stay_on_top", False))
-        stay_on_top_cb = ctk.CTkCheckBox(
-            window_content,
-            text="Stay on top",
-            variable=self.stay_on_top_var,
-            command=self.toggle_stay_on_top,
-            fg_color=self.colors['highlight'],
-            hover_color=self.colors['hover'],
-            text_color=self.colors['text']
-        )
-        stay_on_top_cb.pack(anchor='w', pady=5)
-
-        # Show on-screen overlay text
-        self.show_overlay_var = tk.BooleanVar(value=self.config.get("show_overlay", True))
-        # Initialize overlay manager after show_overlay_var is created
-        if self.overlay is None:
-            self.overlay = OverlayManager(self.root, self.show_overlay_var)
-        show_overlay_cb = ctk.CTkCheckBox(
-            window_content,
-            text="Show on-screen text",
-            variable=self.show_overlay_var,
-            command=self.save_settings,
-            fg_color=self.colors['highlight'],
-            hover_color=self.colors['hover'],
-            text_color=self.colors['text']
-        )
-        show_overlay_cb.pack(anchor='w', pady=5)
-
-        # Appearance header
-        appearance_header = ctk.CTkLabel(
-            frame, 
-            text="Appearance",
-            font=("Segoe UI", 18, "bold"),
-            text_color=self.colors['highlight']
-        )
-        appearance_header.pack(pady=(25, 10), padx=20, anchor='w')
-        
-        # Appearance card
-        appearance_card = ctk.CTkFrame(
-            frame,
-            fg_color=self.colors['bg_card'],
-            corner_radius=12,
-            border_width=1,
-            border_color=self.colors['accent']
-        )
-        appearance_card.pack(fill='x', padx=10, pady=8)
-        
-        appearance_content = ctk.CTkFrame(appearance_card, fg_color="transparent")
-        appearance_content.pack(fill='x', padx=15, pady=12)
-
-        # Color pickers in one inline row
-        colors_row = ctk.CTkFrame(appearance_content, fg_color="transparent")
-        colors_row.pack(fill='x', pady=10)
-
-        # Background color
-        ctk.CTkLabel(colors_row, text="BG:", font=("Segoe UI", 11), text_color=self.colors['text'], width=30).pack(side='left', padx=(0,5))
-        self.bg_color_var = tk.StringVar(value=self.config.get("bg_color", "#1e1e1e"))
-        self.bg_color_btn = ctk.CTkButton(
-            colors_row, 
-            text="", 
-            width=35,
-            height=28,
-            fg_color=self.bg_color_var.get(),
-            hover_color=self.bg_color_var.get(),
-            border_width=2,
-            border_color=self.colors['accent'],
-            corner_radius=6,
-            command=self._pick_bg_color
-        )
-        self.bg_color_btn.pack(side='left', padx=3)
-
-        # Text color
-        ctk.CTkLabel(colors_row, text="Text:", font=("Segoe UI", 11), text_color=self.colors['text'], width=35).pack(side='left', padx=(10,5))
-        self.fg_color_var = tk.StringVar(value=self.config.get("fg_color", "#e0e0e0"))
-        self.fg_color_btn = ctk.CTkButton(
-            colors_row,
-            text="",
-            width=35,
-            height=28,
-            fg_color=self.fg_color_var.get(),
-            hover_color=self.fg_color_var.get(),
-            border_width=2,
-            border_color=self.colors['accent'],
-            corner_radius=6,
-            command=self._pick_fg_color
-        )
-        self.fg_color_btn.pack(side='left', padx=3)
-
-        # Accent color
-        ctk.CTkLabel(colors_row, text="Accent:", font=("Segoe UI", 11), text_color=self.colors['text'], width=45).pack(side='left', padx=(10,5))
-        self.accent_color_var = tk.StringVar(value=self.config.get("accent_color", "#e94560"))
-        self.accent_color_btn = ctk.CTkButton(
-            colors_row,
-            text="",
-            width=35,
-            height=28,
-            fg_color=self.accent_color_var.get(),
-            hover_color=self.accent_color_var.get(),
-            border_width=2,
-            border_color=self.colors['accent'],
-            corner_radius=6,
-            command=self._pick_accent_color
-        )
-        self.accent_color_btn.pack(side='left', padx=3)
-
-        # Card BG color
-        ctk.CTkLabel(colors_row, text="Card:", font=("Segoe UI", 11), text_color=self.colors['text'], width=35).pack(side='left', padx=(10,5))
-        self.card_bg_color_var = tk.StringVar(value=self.config.get("card_bg_color", self.colors['bg_card']))
-        self.card_bg_color_btn = ctk.CTkButton(
-            colors_row,
-            text="",
-            width=35,
-            height=28,
-            fg_color=self.card_bg_color_var.get(),
-            hover_color=self.card_bg_color_var.get(),
-            border_width=2,
-            border_color=self.colors['accent'],
-            corner_radius=6,
-            command=self._pick_card_bg_color
-        )
-        self.card_bg_color_btn.pack(side='left', padx=3)
-
-        # Transparency slider
-        trans_row = ctk.CTkFrame(appearance_content, fg_color="transparent")
-        trans_row.pack(fill='x', pady=10)
-        ctk.CTkLabel(trans_row, text="Transparency:", font=("Segoe UI", 12), text_color=self.colors['text'], width=120, anchor='w').pack(side='left')
-        loaded_trans = self.config.get("transparency", 100)
-        self.transparency_var = tk.IntVar(value=loaded_trans)
-        trans_slider = ctk.CTkSlider(
-            trans_row,
-            from_=50,
-            to=100,
-            variable=self.transparency_var,
-            width=150,
-            command=self._on_transparency_change,
-            fg_color=self.colors['bg_light'],
-            progress_color=self.colors['highlight'],
-            button_color=self.colors['highlight'],
-            button_hover_color=self.colors['hover']
-        )
-        trans_slider.pack(side='left', padx=10)
-        self.trans_label = ctk.CTkLabel(trans_row, text=f"{loaded_trans}%", font=("Segoe UI", 11), text_color=self.colors['text'], width=40)
-        self.trans_label.pack(side='left')
-
-        # Apply initial transparency
-        self._apply_transparency()
-
-        # Export/Import buttons
-        export_row = ctk.CTkFrame(appearance_content, fg_color="transparent")
-        export_row.pack(fill='x', pady=(15, 5))
-        ctk.CTkButton(
-            export_row,
-            text="Export Settings",
-            width=140,
-            height=32,
-            fg_color=self.colors['bg_light'],
-            hover_color=self.colors['hover'],
-            text_color=self.colors['text'],
-            corner_radius=8,
-            command=self.export_all_settings
-        ).pack(side='left', padx=5)
-        ctk.CTkButton(
-            export_row,
-            text="Import Settings",
-            width=140,
-            height=32,
-            fg_color=self.colors['bg_light'],
-            hover_color=self.colors['hover'],
-            text_color=self.colors['text'],
-            corner_radius=8,
-            command=self.import_all_settings
-        ).pack(side='left', padx=5)
-
-        # Reset button
-        ctk.CTkButton(
-            appearance_content,
-            text="Reset All Settings",
-            width=290,
-            height=32,
-            fg_color=self.colors['accent'],
-            hover_color="#c73d52",
-            text_color=self.colors['text'],
-            corner_radius=8,
-            command=self.reset_all_settings
-        ).pack(pady=(10, 5))
-
 
     def create_slider(self, parent, label, config_key, default, min_val, max_val, unit, bold=False, tooltip=None):
         """Create a slider row with label, slider, and editable value entry"""
@@ -1273,6 +1052,52 @@ class MainApp:
     def play_custom_macro(self, macro_index=None):
         """Delegate to custom macro manager"""
         return self.custom_macro_manager.play_custom_macro(macro_index)
+
+    # Public wrappers for macro manager methods (used by UI)
+    def add_new_macro(self):
+        return self._add_new_macro()
+    
+    def delete_current_macro(self):
+        return self._delete_current_macro()
+    
+    def export_current_macro(self):
+        return self._export_current_macro()
+    
+    def import_macro(self):
+        return self._import_macro()
+    
+    def on_macro_tab_click(self, index):
+        return self._on_macro_tab_click(index)
+    
+    def on_macro_name_change(self):
+        return self._on_macro_name_change()
+    
+    def on_macro_speed_change(self, value):
+        return self._on_macro_speed_change(value)
+    
+    def on_macro_keep_timing_change(self):
+        return self._on_macro_keep_timing_change()
+    
+    def on_macro_repeat_change(self):
+        return self._on_macro_repeat_change()
+    
+    def on_macro_infinite_change(self):
+        return self._on_macro_infinite_change()
+    
+    def validate_repeat_times(self, event=None):
+        return self._validate_repeat_times(event)
+    
+    def validate_repeat_delay(self, event=None):
+        return self._validate_repeat_delay(event)
+    
+    def toggle_macro_play(self):
+        return self._toggle_macro_play()
+    
+    def start_recording_macro_hotkey(self):
+        return self._start_recording_macro_hotkey()
+    
+    def load_current_macro_to_ui(self):
+        return self._load_current_macro_to_ui()
 
     def start_mine_drag_recording(self):
         """Record mine drag path - drag item to ground"""
@@ -1606,7 +1431,7 @@ class MainApp:
 
     def start_recording_stop(self):
         """Stop All is always ESC - recording disabled"""
-        print("[DEBUG] Stop All hotkey is fixed to ESC and cannot be changed")
+        # Stop All hotkey is fixed to ESC
         return  # Do nothing - ESC is hard-coded
 
     def on_key_press(self, event):
@@ -1768,6 +1593,10 @@ class MainApp:
         self.dc_inbound_hotkey_var.set("")
         self.tamper_hotkey_var.set("")
         self.mine_hotkey_var.set("")
+        if hasattr(self, 'snap_hotkey_var'):
+            self.snap_hotkey_var.set("")
+        if hasattr(self, 'keycard_hotkey_var'):
+            self.keycard_hotkey_var.set("")
         self.stop_hotkey_var.set("esc")  # Default is esc
         print("[RESET] All hotkeys cleared")
 
@@ -1777,16 +1606,74 @@ class MainApp:
         self.stay_on_top_var.set(False)
         self.triggernade_repeat_var.set(True)
 
-        # Reset ALL timing sliders and positions
+        # Clear all drag positions (these affect the "recorded" indicators)
+        print("[RESET] Clearing all drag positions...")
+        if hasattr(self, 'snap_drag_start'):
+            self.snap_drag_start = None
+        if hasattr(self, 'snap_drag_end'):
+            self.snap_drag_end = None
+        if hasattr(self, 'keycard_drag_start'):
+            self.keycard_drag_start = None
+        if hasattr(self, 'keycard_drag_end'):
+            self.keycard_drag_end = None
+        if hasattr(self, 'trig_drag_start'):
+            self.trig_drag_start = None
+        if hasattr(self, 'trig_drag_end'):
+            self.trig_drag_end = None
+        if hasattr(self, 'trig_slot_pos'):
+            self.trig_slot_pos = None
+        if hasattr(self, 'trig_drop_pos'):
+            self.trig_drop_pos = None
+        if hasattr(self, 'mine_drag_start'):
+            self.mine_drag_start = None
+        if hasattr(self, 'mine_drag_end'):
+            self.mine_drag_end = None
+        if hasattr(self, 'mine_slot_pos'):
+            self.mine_slot_pos = None
+        if hasattr(self, 'mine_drop_pos'):
+            self.mine_drop_pos = None
+
+        # Reset ALL timing sliders and positions (without preserving positions)
         print("[RESET] Resetting all timing defaults...")
-        self.reset_triggernade_defaults()
-        self.reset_mine_defaults()
+        # Reset triggernade without preserving positions
+        defaults = self.settings_manager.groups.get("triggernade", {}).copy()
+        defaults["trig_slot_pos"] = None
+        defaults["trig_drop_pos"] = None
+        defaults["trig_drag_start"] = None
+        defaults["trig_drag_end"] = None
+        self.settings_manager.set_settings("triggernade", defaults)
+        
+        # Reset mine without preserving positions
+        mine_defaults = self.settings_manager.groups.get("mine", {}).copy()
+        mine_defaults["mine_slot_pos"] = None
+        mine_defaults["mine_drop_pos"] = None
+        mine_defaults["mine_drag_start"] = None
+        mine_defaults["mine_drag_end"] = None
+        self.settings_manager.set_settings("mine", mine_defaults)
+        
+        # Clear snaphook and keycard positions
+        snap_defaults = self.settings_manager.groups.get("snaphook", {}).copy()
+        snap_defaults["snap_drag_start"] = None
+        snap_defaults["snap_drag_end"] = None
+        self.settings_manager.set_settings("snaphook", snap_defaults)
+        
+        keycard_defaults = self.settings_manager.groups.get("keycard", {}).copy()
+        keycard_defaults["keycard_drag_start"] = None
+        keycard_defaults["keycard_drag_end"] = None
+        self.settings_manager.set_settings("keycard", keycard_defaults)
 
         # Re-register hotkeys (will be empty now)
         self.register_hotkeys()
 
+        # Update indicators without rebuilding UI (safer)
+        self.indicator_manager.update_all_indicators()
+
         print("[RESET] ALL settings reset to factory defaults")
         self.show_overlay("All settings reset!")
+    
+    def reset_preferences_only(self):
+        """Reset only appearance and general preferences, preserving timing settings"""
+        return self.reset_manager.reset_preferences_only()
 
     # ===== EXPORT/IMPORT SETTINGS =====
     def _get_triggernade_settings(self):
@@ -1912,6 +1799,7 @@ class MainApp:
                 self.triggernade_running = True
                 self.root.after(0, lambda: self.triggernade_status_var.set("RUNNING"))
                 self.root.after(0, lambda: self.triggernade_status_label.configure(foreground="orange"))
+                self.root.after(0, lambda: self.indicator_manager.set_indicator_running('triggernade'))
                 self.root.after(0, lambda: self.show_overlay("Wolfpack/Triggernade started"))
                 threading.Thread(target=self.run_triggernade_macro, daemon=True).start()
         finally:
@@ -1939,6 +1827,7 @@ class MainApp:
                 self.mine_running = True
                 self.root.after(0, lambda: self.mine_status_var.set("RUNNING"))
                 self.root.after(0, lambda: self.mine_status_label.configure(foreground="orange"))
+                self.root.after(0, lambda: self.indicator_manager.set_indicator_running('mine'))
                 self.root.after(0, lambda: self.show_overlay("Mine Dupe started"))
                 threading.Thread(target=self.macro_executor.run_mine_macro, daemon=True).start()
         finally:
@@ -1952,6 +1841,7 @@ class MainApp:
             self.root.after(0, lambda: self.show_overlay("Snaphook not configured!", force=True))
             return
         
+        self.root.after(0, lambda: self.indicator_manager.set_indicator_running('snaphook'))
         self.root.after(0, lambda: self.show_overlay("Snaphook executing...", force=True))
         threading.Thread(target=self.macro_executor.execute_snap_action, daemon=True).start()
 
@@ -1963,6 +1853,7 @@ class MainApp:
             self.root.after(0, lambda: self.show_overlay("Keycard not configured!", force=True))
             return
         
+        self.root.after(0, lambda: self.indicator_manager.set_indicator_running('keycard'))
         self.root.after(0, lambda: self.show_overlay("Keycard executing...", force=True))
         threading.Thread(target=self.macro_executor.execute_keycard_action, daemon=True).start()
 
@@ -1984,6 +1875,15 @@ class MainApp:
         """Hide overlay - delegates to OverlayManager"""
         if self.overlay:
             self.overlay.hide_overlay()
+    
+    def _ensure_overlay(self):
+        """Ensure overlay is initialized"""
+        if self.overlay is None:
+            if hasattr(self, 'show_overlay_var'):
+                self.overlay = OverlayManager(self.root, self.show_overlay_var)
+            else:
+                self.overlay = OverlayManager(self.root)
+        return self.overlay
 
     def on_close(self):
         self.triggernade_stop = True

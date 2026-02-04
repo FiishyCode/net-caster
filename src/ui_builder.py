@@ -2,6 +2,56 @@ import tkinter as tk
 import customtkinter as ctk
 from tkinter import ttk
 
+
+class ToolTip:
+    """Simple tooltip for tkinter/customtkinter widgets"""
+    
+    def __init__(self, widget, text, colors):
+        self.widget = widget
+        self.text = text
+        self.colors = colors
+        self.tooltip_window = None
+        
+        widget.bind('<Enter>', self.show)
+        widget.bind('<Leave>', self.hide)
+        widget.bind('<Button-1>', self.hide)
+    
+    def show(self, event=None):
+        if self.tooltip_window:
+            return
+        
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
+        
+        self.tooltip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        tw.attributes('-topmost', True)
+        
+        # Create frame with border
+        frame = tk.Frame(tw, bg=self.colors['highlight'], padx=1, pady=1)
+        frame.pack()
+        
+        inner = tk.Frame(frame, bg=self.colors['bg_card'], padx=10, pady=8)
+        inner.pack()
+        
+        label = tk.Label(
+            inner,
+            text=self.text,
+            justify='left',
+            bg=self.colors['bg_card'],
+            fg=self.colors['text'],
+            font=('Segoe UI', 10),
+            wraplength=280
+        )
+        label.pack()
+    
+    def hide(self, event=None):
+        if self.tooltip_window:
+            self.tooltip_window.destroy()
+            self.tooltip_window = None
+
+
 class UIBuilder:
     """Manages UI building - tightly coupled to app instance"""
     
@@ -151,17 +201,19 @@ class UIBuilder:
 
     def _create_action_card(self, parent, title, tooltip_text, has_action=False):
         """Create a modern card-style container for an action"""
+        # Use a subtle border color that complements the theme
+        border_color = '#2d3441'  # Subtle border that doesn't overpower
         card = ctk.CTkFrame(
             parent,
             fg_color=self.app.colors['bg_card'],
-            corner_radius=12,
+            corner_radius=14,
             border_width=1,
-            border_color=self.app.colors['accent']
+            border_color=border_color
         )
         card.pack(fill='x', padx=10, pady=8)
         
         content = ctk.CTkFrame(card, fg_color="transparent")
-        content.pack(fill='x', padx=15, pady=12)
+        content.pack(fill='x', padx=16, pady=14)
         
         return card, content
     
@@ -217,6 +269,12 @@ class UIBuilder:
             return True
         return False
 
+    def _save_triggernade_repeat(self):
+        """Save triggernade repeat setting"""
+        from config import save_config
+        self.app.config["triggernade_repeat"] = self.app.triggernade_repeat_var.get()
+        save_config(self.app.config)
+
     def _build_config_tab(self):
         """Build the Config tab with keybind controls only"""
         frame = self.app.config_tab
@@ -234,28 +292,8 @@ class UIBuilder:
         left_side = ctk.CTkFrame(dc_both_frame, fg_color="transparent")
         left_side.pack(side='left', fill='x', expand=True)
         
-        is_recorded = self._is_action_recorded('dc_both')
-        indicator_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-        
-        indicator_frame = ctk.CTkFrame(left_side, fg_color="transparent", width=14, height=14)
-        indicator_frame.pack(side='left', padx=(0, 10))
-        indicator_frame.pack_propagate(False)
-        
-        self.app.dc_both_indicator = ctk.CTkLabel(
-            indicator_frame,
-            text="●",
-            font=("Segoe UI", 16),
-            text_color=indicator_color,
-            width=14,
-            height=14
-        )
-        self.app.dc_both_indicator.pack(expand=True)
-        
-        title_frame = ctk.CTkFrame(left_side, fg_color="transparent")
-        title_frame.pack(side='left', fill='x', expand=True)
-        
         title_label = ctk.CTkLabel(
-            title_frame,
+            left_side,
             text="⚡ Quick DC",
             font=("Segoe UI", 14, "bold"),
             text_color=self.app.colors['text']
@@ -263,7 +301,7 @@ class UIBuilder:
         title_label.pack(side='top', anchor='w')
         
         desc_label = ctk.CTkLabel(
-            title_frame,
+            left_side,
             text="Disconnect both incoming and outgoing packets",
             font=("Segoe UI", 10),
             text_color=self.app.colors['text_dim']
@@ -273,9 +311,25 @@ class UIBuilder:
         controls_frame = ctk.CTkFrame(dc_both_frame, fg_color="transparent")
         controls_frame.pack(side='right', padx=(10, 0))
         
+        is_recorded = self._is_action_recorded('dc_both')
+        status_text = "Ready" if is_recorded else "Not Set"
+        status_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
+        
+        self.app.dc_both_indicator = ctk.CTkLabel(
+            controls_frame,
+            text=status_text,
+            font=("Segoe UI", 9),
+            text_color=status_color,
+            width=50
+        )
+        self.app.dc_both_indicator.pack(side='left', padx=(0, 8))
+        
+        keybind_section = ctk.CTkFrame(controls_frame, fg_color="transparent")
+        keybind_section.pack(side='left', padx=(0, 8))
+        
         self.app.dc_both_hotkey_var = tk.StringVar(value=self.app.config.get("dc_both_hotkey", ""))
         self.app.dc_both_hotkey_entry = ctk.CTkEntry(
-            controls_frame,
+            keybind_section,
             textvariable=self.app.dc_both_hotkey_var,
             width=80,
             height=32,
@@ -287,7 +341,7 @@ class UIBuilder:
         self.app.dc_both_hotkey_entry.pack(side='left', padx=(0, 5))
         
         self.app.dc_both_record_btn = ctk.CTkButton(
-            controls_frame,
+            keybind_section,
             text="Keybind",
             width=70,
             height=32,
@@ -297,43 +351,29 @@ class UIBuilder:
             corner_radius=8
         )
         self.app.dc_both_record_btn.pack(side='left')
+        
+        # Spacer to match width of Action button on other cards
+        spacer = ctk.CTkFrame(controls_frame, fg_color="transparent", width=70, height=32)
+        spacer.pack(side='left')
+        spacer.pack_propagate(False)
 
         card, snap_frame = self._create_action_card(frame, "🪝 Snaphook", "Quick switches util with safepocket", has_action=True)
         
         left_side = ctk.CTkFrame(snap_frame, fg_color="transparent")
         left_side.pack(side='left', fill='x', expand=True)
         
-        is_recorded = self._is_action_recorded('snaphook')
-        indicator_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-        
-        indicator_frame = ctk.CTkFrame(left_side, fg_color="transparent", width=14, height=14)
-        indicator_frame.pack(side='left', padx=(0, 10))
-        indicator_frame.pack_propagate(False)
-        
-        self.app.snap_indicator = ctk.CTkLabel(
-            indicator_frame,
-            text="●",
-            font=("Segoe UI", 16),
-            text_color=indicator_color,
-            width=14,
-            height=14
-        )
-        self.app.snap_indicator.pack(expand=True)
-        
-        title_frame = ctk.CTkFrame(left_side, fg_color="transparent")
-        title_frame.pack(side='left', fill='x', expand=True)
-        
         title_label = ctk.CTkLabel(
-            title_frame,
+            left_side,
             text="🪝 Snaphook",
             font=("Segoe UI", 14, "bold"),
             text_color=self.app.colors['text'],
-            anchor='w'
+            cursor="hand2"
         )
         title_label.pack(side='top', anchor='w')
+        ToolTip(title_label, "Quickly swap items with your safepocket.\nWorks on all items you can drag in inventory.", self.app.colors)
         
         desc_label = ctk.CTkLabel(
-            title_frame,
+            left_side,
             text="Quick switches util with safepocket",
             font=("Segoe UI", 10),
             text_color=self.app.colors['text_dim']
@@ -342,6 +382,19 @@ class UIBuilder:
         
         controls_frame = ctk.CTkFrame(snap_frame, fg_color="transparent")
         controls_frame.pack(side='right', padx=(10, 0))
+        
+        is_recorded = self._is_action_recorded('snaphook')
+        status_text = "Ready" if is_recorded else "Not Set"
+        status_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
+        
+        self.app.snap_indicator = ctk.CTkLabel(
+            controls_frame,
+            text=status_text,
+            font=("Segoe UI", 9),
+            text_color=status_color,
+            width=50
+        )
+        self.app.snap_indicator.pack(side='left', padx=(0, 8))
         
         keybind_section = ctk.CTkFrame(controls_frame, fg_color="transparent")
         keybind_section.pack(side='left', padx=(0, 8))
@@ -396,38 +449,36 @@ class UIBuilder:
         left_side = ctk.CTkFrame(trig_frame, fg_color="transparent")
         left_side.pack(side='left', fill='x', expand=True)
         
-        is_recorded = self._is_action_recorded('triggernade')
-        indicator_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-        
-        indicator_frame = ctk.CTkFrame(left_side, fg_color="transparent", width=14, height=14)
-        indicator_frame.pack(side='left', padx=(0, 10))
-        indicator_frame.pack_propagate(False)
-        
-        self.app.trig_indicator = ctk.CTkLabel(
-            indicator_frame,
-            text="●",
-            font=("Segoe UI", 16),
-            text_color=indicator_color,
-            width=14,
-            height=14
-        )
-        self.app.trig_indicator.pack(expand=True)
-        
-        self.app.trig_keybind_indicator = self.app.trig_indicator
-        
-        title_frame = ctk.CTkFrame(left_side, fg_color="transparent")
-        title_frame.pack(side='left', fill='x', expand=True)
+        title_row = ctk.CTkFrame(left_side, fg_color="transparent")
+        title_row.pack(side='top', anchor='w')
         
         title_label = ctk.CTkLabel(
-            title_frame,
-            text="🎯 Throwable",
+            title_row,
+            text="🎣 Throwable",
             font=("Segoe UI", 14, "bold"),
-            text_color=self.app.colors['text']
+            text_color=self.app.colors['text'],
+            cursor="hand2"
         )
-        title_label.pack(side='top', anchor='w')
+        title_label.pack(side='left')
+        ToolTip(title_label, "Dupes the throw action of throwables.\nOnly disarmable items (like C4) can be picked back up.\nOthers are consumed but you keep the original.\nGreat for WP on Arc and similar.", self.app.colors)
+        
+        self.app.triggernade_repeat_var = tk.BooleanVar(value=self.app.config.get("triggernade_repeat", True))
+        loop_cb = ctk.CTkCheckBox(
+            title_row,
+            text="Loop",
+            variable=self.app.triggernade_repeat_var,
+            command=self._save_triggernade_repeat,
+            fg_color=self.app.colors['highlight'],
+            hover_color=self.app.colors['hover'],
+            text_color=self.app.colors['text_dim'],
+            checkbox_width=16,
+            checkbox_height=16,
+            font=("Segoe UI", 10)
+        )
+        loop_cb.pack(side='left', padx=(10, 0))
         
         desc_label = ctk.CTkLabel(
-            title_frame,
+            left_side,
             text="Throw → DC → Drop → Reconnect → Grab loop",
             font=("Segoe UI", 10),
             text_color=self.app.colors['text_dim']
@@ -436,6 +487,21 @@ class UIBuilder:
         
         controls_frame = ctk.CTkFrame(trig_frame, fg_color="transparent")
         controls_frame.pack(side='right', padx=(10, 0))
+        
+        is_recorded = self._is_action_recorded('triggernade')
+        status_text = "Ready" if is_recorded else "Not Set"
+        status_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
+        
+        self.app.trig_indicator = ctk.CTkLabel(
+            controls_frame,
+            text=status_text,
+            font=("Segoe UI", 9),
+            text_color=status_color,
+            width=50
+        )
+        self.app.trig_indicator.pack(side='left', padx=(0, 8))
+        
+        self.app.trig_keybind_indicator = self.app.trig_indicator
         
         keybind_section = ctk.CTkFrame(controls_frame, fg_color="transparent")
         keybind_section.pack(side='left', padx=(0, 8))
@@ -482,38 +548,18 @@ class UIBuilder:
         left_side = ctk.CTkFrame(mine_frame, fg_color="transparent")
         left_side.pack(side='left', fill='x', expand=True)
         
-        is_recorded = self._is_action_recorded('mine')
-        indicator_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-        
-        indicator_frame = ctk.CTkFrame(left_side, fg_color="transparent", width=14, height=14)
-        indicator_frame.pack(side='left', padx=(0, 10))
-        indicator_frame.pack_propagate(False)
-        
-        self.app.mine_indicator = ctk.CTkLabel(
-            indicator_frame,
-            text="●",
-            font=("Segoe UI", 16),
-            text_color=indicator_color,
-            width=14,
-            height=14
-        )
-        self.app.mine_indicator.pack(expand=True)
-        
-        self.app.mine_keybind_indicator = self.app.mine_indicator
-        
-        title_frame = ctk.CTkFrame(left_side, fg_color="transparent")
-        title_frame.pack(side='left', fill='x', expand=True)
-        
         title_label = ctk.CTkLabel(
-            title_frame,
-            text="💣 Deployable",
+            left_side,
+            text="🧰 Deployable",
             font=("Segoe UI", 14, "bold"),
-            text_color=self.app.colors['text']
+            text_color=self.app.colors['text'],
+            cursor="hand2"
         )
         title_label.pack(side='top', anchor='w')
+        ToolTip(title_label, "Dupes deployable items like mines and barricades.\nWorks on most deployables except ziplines.\nPlace, dupe, pick up the copy.", self.app.colors)
         
         desc_label = ctk.CTkLabel(
-            title_frame,
+            left_side,
             text="Cook → Open inv + DC → Drop → Reconnect → Grab",
             font=("Segoe UI", 10),
             text_color=self.app.colors['text_dim']
@@ -522,6 +568,21 @@ class UIBuilder:
         
         controls_frame = ctk.CTkFrame(mine_frame, fg_color="transparent")
         controls_frame.pack(side='right', padx=(10, 0))
+        
+        is_recorded = self._is_action_recorded('mine')
+        status_text = "Ready" if is_recorded else "Not Set"
+        status_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
+        
+        self.app.mine_indicator = ctk.CTkLabel(
+            controls_frame,
+            text=status_text,
+            font=("Segoe UI", 9),
+            text_color=status_color,
+            width=50
+        )
+        self.app.mine_indicator.pack(side='left', padx=(0, 8))
+        
+        self.app.mine_keybind_indicator = self.app.mine_indicator
         
         keybind_section = ctk.CTkFrame(controls_frame, fg_color="transparent")
         keybind_section.pack(side='left', padx=(0, 8))
@@ -568,37 +629,18 @@ class UIBuilder:
         left_side = ctk.CTkFrame(keycard_frame, fg_color="transparent")
         left_side.pack(side='left', fill='x', expand=True)
         
-        is_recorded = self._is_action_recorded('keycard')
-        indicator_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-        
-        indicator_frame = ctk.CTkFrame(left_side, fg_color="transparent", width=14, height=14)
-        indicator_frame.pack(side='left', padx=(0, 10))
-        indicator_frame.pack_propagate(False)
-        
-        self.app.keycard_indicator = ctk.CTkLabel(
-            indicator_frame,
-            text="●",
-            font=("Segoe UI", 16),
-            text_color=indicator_color,
-            width=14,
-            height=14
-        )
-        self.app.keycard_indicator.pack(expand=True)
-        
-        title_frame = ctk.CTkFrame(left_side, fg_color="transparent")
-        title_frame.pack(side='left', fill='x', expand=True)
-        
         title_label = ctk.CTkLabel(
-            title_frame,
+            left_side,
             text="🔑 Keycard",
             font=("Segoe UI", 14, "bold"),
             text_color=self.app.colors['text'],
-            anchor='w'
+            cursor="hand2"
         )
         title_label.pack(side='top', anchor='w')
+        ToolTip(title_label, "Dupes keycards for rooms and hatches.\nWorks on all keycard types.\nThe dupe is consumed on use, but you keep the original.", self.app.colors)
         
         desc_label = ctk.CTkLabel(
-            title_frame,
+            left_side,
             text="DC → Open inv → Drag to drop → Reconnect",
             font=("Segoe UI", 10),
             text_color=self.app.colors['text_dim']
@@ -607,6 +649,19 @@ class UIBuilder:
         
         controls_frame = ctk.CTkFrame(keycard_frame, fg_color="transparent")
         controls_frame.pack(side='right', padx=(10, 0))
+        
+        is_recorded = self._is_action_recorded('keycard')
+        status_text = "Ready" if is_recorded else "Not Set"
+        status_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
+        
+        self.app.keycard_indicator = ctk.CTkLabel(
+            controls_frame,
+            text=status_text,
+            font=("Segoe UI", 9),
+            text_color=status_color,
+            width=50
+        )
+        self.app.keycard_indicator.pack(side='left', padx=(0, 8))
         
         keybind_section = ctk.CTkFrame(controls_frame, fg_color="transparent")
         keybind_section.pack(side='left', padx=(0, 8))
@@ -690,7 +745,6 @@ class UIBuilder:
         trig_drag_e = self.app.config.get("trig_drag_end", None)
         self.app.trig_drag_start = tuple(trig_drag_s) if trig_drag_s else None
         self.app.trig_drag_end = tuple(trig_drag_e) if trig_drag_e else None
-        self.app.triggernade_repeat_var = tk.BooleanVar(value=self.app.config.get("triggernade_repeat", False))
         self.app.trig_m1_hold_var = tk.IntVar(value=int(self.app.config.get("trig_m1_hold", 65)))
         self.app.trig_m2_hold_var = tk.IntVar(value=int(self.app.config.get("trig_m2_hold", 51)))
         self.app.trig_drag_speed_var = tk.IntVar(value=int(self.app.config.get("trig_drag_speed", 8)))
@@ -717,10 +771,12 @@ class UIBuilder:
         self.app.mine_drag_var = tk.StringVar()
         mine_slot = self.app.config.get("mine_slot_pos", [3032, 1236])
         mine_drop = self.app.config.get("mine_drop_pos", [3171, 1593])
-        self.app.mine_slot_pos = tuple(mine_slot)
-        self.app.mine_drop_pos = tuple(mine_drop)
-        self.app.mine_drag_start = tuple(self.app.config.get("mine_drag_start", [3032, 1236]))
-        self.app.mine_drag_end = tuple(self.app.config.get("mine_drag_end", [3171, 1593]))
+        mine_drag_s = self.app.config.get("mine_drag_start", [3032, 1236])
+        mine_drag_e = self.app.config.get("mine_drag_end", [3171, 1593])
+        self.app.mine_slot_pos = tuple(mine_slot) if mine_slot else None
+        self.app.mine_drop_pos = tuple(mine_drop) if mine_drop else None
+        self.app.mine_drag_start = tuple(mine_drag_s) if mine_drag_s else None
+        self.app.mine_drag_end = tuple(mine_drag_e) if mine_drag_e else None
         self.app.mine_cook_var = tk.IntVar(value=int(self.app.config.get("mine_cook", 236)))
         self.app.mine_dc_delay_var = tk.IntVar(value=int(self.app.config.get("mine_dc_delay", 99)))
         self.app.mine_drag_speed_var = tk.IntVar(value=int(self.app.config.get("mine_drag_speed", 8)))
@@ -757,16 +813,6 @@ class UIBuilder:
         self.app.keycard_drag_end = tuple(keycard_drag_e) if keycard_drag_e else None
         self.app._keycard_drag_started = False
 
-        stop_frame = ttk.Frame(frame)
-        
-        self.app.stop_hotkey_var = tk.StringVar(value="esc")
-        self.app.stop_hotkey_entry = tk.Entry(stop_frame, textvariable=self.app.stop_hotkey_var, width=15, state="readonly",
-                                          bd=0, highlightthickness=0, bg=self.app.colors['bg_light'], fg=self.app.colors['text'], readonlybackground=self.app.colors['bg_light'])
-        self.app.stop_record_btn = ttk.Button(stop_frame, text="Record", width=8, command=self.app.recording_manager.start_recording_stop)
-        
-        self.app.stop_indicator = tk.Canvas(stop_frame, width=12, height=12, bg=self.app.colors['bg_card'], highlightthickness=0, bd=0)
-        self.app.stop_indicator.create_oval(2, 2, 10, 10, fill=self.app.colors['recorded'], outline='', width=0)
-
     def _build_appearance_tab(self):
         """Build the Appearance tab with visual settings"""
         frame = self.app.appearance_tab
@@ -782,14 +828,14 @@ class UIBuilder:
         window_card = ctk.CTkFrame(
             frame,
             fg_color=self.app.colors['bg_card'],
-            corner_radius=12,
+            corner_radius=14,
             border_width=1,
-            border_color=self.app.colors['accent']
+            border_color='#2d3441'
         )
         window_card.pack(fill='x', padx=10, pady=8)
         
         window_content = ctk.CTkFrame(window_card, fg_color="transparent")
-        window_content.pack(fill='x', padx=15, pady=12)
+        window_content.pack(fill='x', padx=16, pady=14)
 
         self.app.stay_on_top_var = tk.BooleanVar(value=self.app.config.get("stay_on_top", False))
         stay_on_top_cb = ctk.CTkCheckBox(
@@ -829,14 +875,14 @@ class UIBuilder:
         appearance_card = ctk.CTkFrame(
             frame,
             fg_color=self.app.colors['bg_card'],
-            corner_radius=12,
+            corner_radius=14,
             border_width=1,
-            border_color=self.app.colors['accent']
+            border_color='#2d3441'
         )
         appearance_card.pack(fill='x', padx=10, pady=8)
         
         appearance_content = ctk.CTkFrame(appearance_card, fg_color="transparent")
-        appearance_content.pack(fill='x', padx=15, pady=12)
+        appearance_content.pack(fill='x', padx=16, pady=14)
 
         colors_row = ctk.CTkFrame(appearance_content, fg_color="transparent")
         colors_row.pack(fill='x', pady=10)
@@ -928,39 +974,49 @@ class UIBuilder:
 
         self.app._apply_transparency()
 
-        export_row = ctk.CTkFrame(appearance_content, fg_color="transparent")
-        export_row.pack(fill='x', pady=(15, 5))
+        settings_row = ctk.CTkFrame(appearance_content, fg_color="transparent")
+        settings_row.pack(fill='x', pady=(15, 5))
         ctk.CTkButton(
-            export_row,
+            settings_row,
             text="Export Settings",
-            width=140,
+            width=110,
             height=32,
             fg_color=self.app.colors['bg_light'],
             hover_color=self.app.colors['hover'],
             text_color=self.app.colors['text'],
             corner_radius=8,
             command=self.app.export_all_settings
-        ).pack(side='left', padx=5)
+        ).pack(side='left', padx=3)
         ctk.CTkButton(
-            export_row,
+            settings_row,
             text="Import Settings",
-            width=140,
+            width=110,
             height=32,
             fg_color=self.app.colors['bg_light'],
             hover_color=self.app.colors['hover'],
             text_color=self.app.colors['text'],
             corner_radius=8,
             command=self.app.import_all_settings
-        ).pack(side='left', padx=5)
-
+        ).pack(side='left', padx=3)
         ctk.CTkButton(
-            appearance_content,
+            settings_row,
+            text="Reset Preferences",
+            width=120,
+            height=32,
+            fg_color=self.app.colors['bg_light'],
+            hover_color=self.app.colors['hover'],
+            text_color=self.app.colors['text'],
+            corner_radius=8,
+            command=self.app.reset_preferences_only
+        ).pack(side='left', padx=3)
+        ctk.CTkButton(
+            settings_row,
             text="Reset All Settings",
-            width=290,
+            width=120,
             height=32,
             fg_color=self.app.colors['accent'],
             hover_color="#c73d52",
             text_color=self.app.colors['text'],
             corner_radius=8,
             command=self.app.reset_all_settings
-        ).pack(pady=(10, 5))
+        ).pack(side='left', padx=3)

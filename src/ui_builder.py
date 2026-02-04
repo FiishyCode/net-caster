@@ -357,6 +357,65 @@ class UIBuilder:
         spacer.pack(side='left')
         spacer.pack_propagate(False)
 
+        card, interact_frame = self._create_action_card(frame, "Interact", "In-game key for interacting with items (used by Keycard dupe)", has_action=False)
+        left_side = ctk.CTkFrame(interact_frame, fg_color="transparent")
+        left_side.pack(side='left', fill='x', expand=True)
+        title_label = ctk.CTkLabel(
+            left_side,
+            text="Interact",
+            font=("Segoe UI", 14, "bold"),
+            text_color=self.app.colors['text']
+        )
+        title_label.pack(side='top', anchor='w')
+        desc_label = ctk.CTkLabel(
+            left_side,
+            text="In-game key for interacting with items (used by Keycard dupe)",
+            font=("Segoe UI", 10),
+            text_color=self.app.colors['text_dim']
+        )
+        desc_label.pack(side='top', anchor='w')
+        controls_frame_interact = ctk.CTkFrame(interact_frame, fg_color="transparent")
+        controls_frame_interact.pack(side='right', padx=(10, 0))
+        has_interact = bool(self.app.config.get("keycard_interact_key", ""))
+        interact_status_text = "Ready" if has_interact else "Not Set"
+        interact_status_color = self.app.colors['recorded'] if has_interact else self.app.colors['not_recorded']
+        self.app.keycard_interact_indicator = ctk.CTkLabel(
+            controls_frame_interact,
+            text=interact_status_text,
+            font=("Segoe UI", 9),
+            text_color=interact_status_color,
+            width=50
+        )
+        self.app.keycard_interact_indicator.pack(side='left', padx=(0, 8))
+        keybind_section_interact = ctk.CTkFrame(controls_frame_interact, fg_color="transparent")
+        keybind_section_interact.pack(side='left', padx=(0, 8))
+        self.app.keycard_interact_key_var = tk.StringVar(value=self.app.config.get("keycard_interact_key", "e"))
+        self.app.keycard_interact_key_entry = ctk.CTkEntry(
+            keybind_section_interact,
+            textvariable=self.app.keycard_interact_key_var,
+            width=80,
+            height=32,
+            state="readonly",
+            fg_color=self.app.colors['bg_light'],
+            text_color=self.app.colors['text'],
+            border_width=0
+        )
+        self.app.keycard_interact_key_entry.pack(side='left', padx=(0, 5))
+        self.app.keycard_interact_record_btn = ctk.CTkButton(
+            keybind_section_interact,
+            text="Keybind",
+            width=70,
+            height=32,
+            command=self.app.start_recording_keycard_interact,
+            fg_color=self.app.colors['highlight'],
+            hover_color=self.app.colors['hover'],
+            corner_radius=8
+        )
+        self.app.keycard_interact_record_btn.pack(side='left')
+        spacer_interact = ctk.CTkFrame(controls_frame_interact, fg_color="transparent", width=70, height=32)
+        spacer_interact.pack(side='left')
+        spacer_interact.pack_propagate(False)
+
         card, snap_frame = self._create_action_card(frame, "🪝 Snaphook", "Quick switches util with safepocket", has_action=True)
         
         left_side = ctk.CTkFrame(snap_frame, fg_color="transparent")
@@ -624,7 +683,7 @@ class UIBuilder:
         )
         self.app.mine_drag_btn.pack(side='left')
 
-        card, keycard_frame = self._create_action_card(frame, "🔑 Keycard", "DC → Open inv → Drag to drop → Reconnect", has_action=True)
+        card, keycard_frame = self._create_action_card(frame, "🔑 Keycard", "Interact → 0.2s → DC → Open inv → Drag to drop → Reconnect", has_action=True)
         
         left_side = ctk.CTkFrame(keycard_frame, fg_color="transparent")
         left_side.pack(side='left', fill='x', expand=True)
@@ -641,7 +700,7 @@ class UIBuilder:
         
         desc_label = ctk.CTkLabel(
             left_side,
-            text="DC → Open inv → Drag to drop → Reconnect",
+            text="Interact → 0.2s → DC → Open inv → Drag to drop → Reconnect",
             font=("Segoe UI", 10),
             text_color=self.app.colors['text_dim']
         )

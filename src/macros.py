@@ -504,58 +504,80 @@ class MacroExecutor:
             self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('snaphook'))
             self.app.root.after(0, lambda: self.app.show_overlay(f"Snaphook error: {e}", force=True))
     
+    def _key_to_pynput(self, key_str):
+        """Convert key string (e.g. 'e', 'f1') to pynput key for press/release"""
+        if not key_str:
+            return None
+        key_str = key_str.lower().strip()
+        special = {
+            'shift': Key.shift, 'ctrl': Key.ctrl, 'alt': Key.alt,
+            'space': Key.space, 'enter': Key.enter, 'tab': Key.tab,
+            'esc': Key.esc, 'escape': Key.esc,
+            'up': Key.up, 'down': Key.down, 'left': Key.left, 'right': Key.right,
+            'f1': Key.f1, 'f2': Key.f2, 'f3': Key.f3, 'f4': Key.f4,
+            'f5': Key.f5, 'f6': Key.f6, 'f7': Key.f7, 'f8': Key.f8,
+            'f9': Key.f9, 'f10': Key.f10, 'f11': Key.f11, 'f12': Key.f12,
+        }
+        return special.get(key_str, key_str)
+    
     def execute_keycard_action(self):
-        """Execute the keycard action: disconnect, open inv, drag key to drop, close inv, reconnect"""
-        from pynput.mouse import Controller as MouseController, Button as MouseButton
-        from pynput.keyboard import Controller as KeyboardController, Key
-        import time
-        
-        pynput_mouse = MouseController()
-        pynput_keyboard = KeyboardController()
+        """Execute the keycard action: press interact, wait, DC, open inv, drag key to drop, close inv, reconnect"""
         is_disconnected = False
         
+        # Validate positions
+        if not self.app.keycard_drag_start or not self.app.keycard_drag_end:
+            self.app.root.after(0, lambda: self.app.show_overlay("Record keycard drag positions first!", force=True))
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('keycard'))
+            return
+        
+        interact_key_str = self.app.config.get("keycard_interact_key", "e") or "e"
+        interact_delay_ms = int(self.app.config.get("keycard_interact_delay", 200))
+        interact_key = self._key_to_pynput(interact_key_str)
+        
         try:
-            print(f"[KEYCARD] Disconnecting internet...")
-            # Disconnect
+            # 1. Press interact button (in-game key to interact with items)
+            print(f"[KEYCARD] Pressing interact key: {interact_key_str}")
+            if interact_key:
+                pynput_keyboard.press(interact_key)
+                self.app.vsleep(50)
+                pynput_keyboard.release(interact_key)
+            
+            # 2. Wait 0.2s (or configured delay) then DC
+            self.app.vsleep(interact_delay_ms)
+            
+            print(f"[KEYCARD] Disconnecting...")
             start_packet_drop(inbound=False, outbound=True)
             is_disconnected = True
-            time.sleep(0.1)
+            self.app.vsleep(100)
             
             print(f"[KEYCARD] Opening inventory...")
-            # Open inventory (TAB key)
             pynput_keyboard.press(Key.tab)
-            time.sleep(0.05)
+            self.app.vsleep(50)
             pynput_keyboard.release(Key.tab)
-            time.sleep(0.3)  # Wait for inventory to open
+            self.app.vsleep(350)
             
-            print(f"[KEYCARD] Dragging keycard from {self.app.keycard_drag_start} to {self.app.keycard_drag_end}")
-            # Move to keycard position and wait
+            print(f"[KEYCARD] Dragging key from {self.app.keycard_drag_start} to {self.app.keycard_drag_end}")
+            # Move to key position (same controller curved_drag uses)
             pynput_mouse.position = self.app.keycard_drag_start
-            time.sleep(0.1)
+            self.app.vsleep(80)
             
-            # Press and hold, wait a bit, then drag
+            # Press and hold left, then drag (curved_drag moves pynput_mouse)
             pynput_mouse.press(MouseButton.left)
-            time.sleep(0.1)  # Hold for a moment before dragging
-            
-            # Use curved drag
-            self.app.curved_drag(self.app.keycard_drag_start, self.app.keycard_drag_end, steps=20, step_delay=5)
-            
-            # Release after drag completes
+            self.app.vsleep(60)
+            self.app.curved_drag(self.app.keycard_drag_start, self.app.keycard_drag_end, steps=25, step_delay=5)
             pynput_mouse.release(MouseButton.left)
-            time.sleep(0.1)
+            self.app.vsleep(80)
             
             print(f"[KEYCARD] Closing inventory...")
-            # Close inventory (TAB key)
             pynput_keyboard.press(Key.tab)
-            time.sleep(0.05)
+            self.app.vsleep(50)
             pynput_keyboard.release(Key.tab)
-            time.sleep(0.1)
+            self.app.vsleep(150)
             
             print(f"[KEYCARD] Reconnecting...")
-            # Reconnect
             stop_packet_drop()
             is_disconnected = False
-            time.sleep(0.1)
+            self.app.vsleep(100)
             
             print(f"[KEYCARD] Complete!")
             self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('keycard'))

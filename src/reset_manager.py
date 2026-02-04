@@ -53,6 +53,8 @@ class ResetManager:
             self.app.snap_hotkey_var.set("")
         if hasattr(self.app, 'keycard_hotkey_var'):
             self.app.keycard_hotkey_var.set("")
+        if hasattr(self.app, 'keycard_interact_key_var'):
+            self.app.keycard_interact_key_var.set("e")
         if hasattr(self.app, 'stop_hotkey_var'):
             self.app.stop_hotkey_var.set("esc")  # Default is esc
         print("[RESET] All hotkeys cleared")
@@ -115,6 +117,8 @@ class ResetManager:
         self.app.settings_manager.set_settings("snaphook", snap_defaults)
         
         keycard_defaults = self.app.settings_manager.groups.get("keycard", {}).copy()
+        keycard_defaults["keycard_interact_key"] = "e"
+        keycard_defaults["keycard_interact_delay"] = 200
         keycard_defaults["keycard_drag_start"] = None
         keycard_defaults["keycard_drag_end"] = None
         self.app.settings_manager.set_settings("keycard", keycard_defaults)
@@ -132,6 +136,8 @@ class ResetManager:
         self.app.config["mine_hotkey"] = ""
         self.app.config["snap_hotkey"] = ""
         self.app.config["keycard_hotkey"] = ""
+        self.app.config["keycard_interact_key"] = "e"
+        self.app.config["keycard_interact_delay"] = 200
         self.app.config["dc_both_hotkey"] = ""
         self.app.config["dc_outbound_hotkey"] = ""
         self.app.config["dc_inbound_hotkey"] = ""

@@ -58,7 +58,7 @@ class MainApp:
             'accent': '#252a3a',       # Subtle accent for borders
             'text': '#e4e7eb',         # Clean light text
             'text_dim': '#9ca3af',     # Muted grey for secondary text
-            'highlight': '#8080c0',    # Purple/lavender accent
+            'highlight': '#0ea5e9',    # Sky blue accent (fits dark theme)
             'success': '#10b981',      # Refined green
             'warning': '#f59e0b',      # Refined amber
             'recorded': '#10b981',     # Green for recorded
@@ -108,6 +108,12 @@ class MainApp:
             traceback.print_exc()
 
         self.config = load_config()
+        
+        # One-time migration: force new default accent (sky blue) for existing configs
+        if not self.config.get("accent_migrated_v2"):
+            self.config["accent_color"] = "#0ea5e9"
+            self.config["accent_migrated_v2"] = True
+            save_config(self.config)
 
         # Initialize theme_manager early (needed for color derivation)
         self.theme_manager = ThemeManager(self)
@@ -164,6 +170,7 @@ class MainApp:
         self.recording_mine = False
         self.recording_snap = False
         self.recording_keycard = False
+        self.recording_keycard_interact = False
         self.recording_drag = False
         self._recording_previous_value = None  # Store previous value for ESC cancel
         self._drag_recording_cancelled = False  # For ESC cancel of drag recordings
@@ -729,6 +736,34 @@ class MainApp:
         )
         self.keycard_record_btn.pack(side='left')
         
+        # Interact key (in-game key to interact with items)
+        interact_section = ctk.CTkFrame(controls_frame, fg_color="transparent")
+        interact_section.pack(side='left', padx=(8, 8))
+        ctk.CTkLabel(interact_section, text="Interact:", text_color=self.colors['text'], font=("Segoe UI", 11)).pack(side='left', padx=(0, 4))
+        self.keycard_interact_key_var = tk.StringVar(value=self.config.get("keycard_interact_key", "e"))
+        self.keycard_interact_key_entry = ctk.CTkEntry(
+            interact_section,
+            textvariable=self.keycard_interact_key_var,
+            width=50,
+            height=32,
+            state="readonly",
+            fg_color=self.colors['bg_light'],
+            text_color=self.colors['text'],
+            border_width=0
+        )
+        self.keycard_interact_key_entry.pack(side='left', padx=(0, 5))
+        self.keycard_interact_record_btn = ctk.CTkButton(
+            interact_section,
+            text="Set",
+            width=50,
+            height=32,
+            command=self.start_recording_keycard_interact,
+            fg_color=self.colors['highlight'],
+            hover_color=self.colors['hover'],
+            corner_radius=8
+        )
+        self.keycard_interact_record_btn.pack(side='left')
+        
         # Action button
         self.keycard_drag_btn = ctk.CTkButton(
             controls_frame,
@@ -953,6 +988,10 @@ class MainApp:
     def start_recording_keycard_drag(self):
         """Delegate to recording manager"""
         return self.recording_manager.start_recording_keycard_drag()
+    
+    def start_recording_keycard_interact(self):
+        """Delegate to recording manager"""
+        return self.recording_manager.start_recording_keycard_interact()
 
     def _show_direction_picker(self):
         """Delegate to direction picker manager"""
@@ -1598,6 +1637,8 @@ class MainApp:
             self.snap_hotkey_var.set("")
         if hasattr(self, 'keycard_hotkey_var'):
             self.keycard_hotkey_var.set("")
+        if hasattr(self, 'keycard_interact_key_var'):
+            self.keycard_interact_key_var.set("e")
         if hasattr(self, 'stop_hotkey_var'):
             self.stop_hotkey_var.set("esc")  # Default is esc
         print("[RESET] All hotkeys cleared")
@@ -1660,6 +1701,8 @@ class MainApp:
         self.settings_manager.set_settings("snaphook", snap_defaults)
         
         keycard_defaults = self.settings_manager.groups.get("keycard", {}).copy()
+        keycard_defaults["keycard_interact_key"] = "e"
+        keycard_defaults["keycard_interact_delay"] = 200
         keycard_defaults["keycard_drag_start"] = None
         keycard_defaults["keycard_drag_end"] = None
         self.settings_manager.set_settings("keycard", keycard_defaults)
@@ -1677,6 +1720,8 @@ class MainApp:
         self.config["mine_hotkey"] = ""
         self.config["snap_hotkey"] = ""
         self.config["keycard_hotkey"] = ""
+        self.config["keycard_interact_key"] = "e"
+        self.config["keycard_interact_delay"] = 200
         self.config["dc_both_hotkey"] = ""
         self.config["dc_outbound_hotkey"] = ""
         self.config["dc_inbound_hotkey"] = ""
@@ -1703,6 +1748,7 @@ class MainApp:
         self.recording_mine = False
         self.recording_snap = False
         self.recording_keycard = False
+        self.recording_keycard_interact = False
         self.recording_dc_both = False
         self.recording_dc_outbound = False
         self.recording_dc_inbound = False
@@ -1718,6 +1764,8 @@ class MainApp:
             self.snap_record_btn.configure(text="Keybind")
         if hasattr(self, 'keycard_record_btn'):
             self.keycard_record_btn.configure(text="Keybind")
+        if hasattr(self, 'keycard_interact_record_btn'):
+            self.keycard_interact_record_btn.configure(text="Set")
         if hasattr(self, 'dc_both_record_btn'):
             self.dc_both_record_btn.configure(text="Keybind")
         if hasattr(self, 'dc_outbound_record_btn'):

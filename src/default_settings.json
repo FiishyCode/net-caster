@@ -53,6 +53,8 @@
   },
   "keycard": {
     "keycard_hotkey": "",
+    "keycard_interact_key": "e",
+    "keycard_interact_delay": 200,
     "keycard_drag_start": null,
     "keycard_drag_end": null
   },
@@ -71,7 +73,7 @@
   "appearance": {
     "bg_color": "#0f1419",
     "fg_color": "#e4e7eb",
-    "accent_color": "#8080c0",
+    "accent_color": "#0ea5e9",
     "card_bg_color": "#1a1f2e",
     "transparency": 100
   }

@@ -89,5 +89,12 @@ class IndicatorManager:
                 color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
                 text = "Ready" if is_recorded else "Not Set"
                 self.app.keycard_indicator.configure(text_color=color, text=text)
+            
+            # Update Interact (keycard interact key) indicator
+            if hasattr(self.app, 'keycard_interact_indicator'):
+                has_interact = bool(self.app.config.get("keycard_interact_key", ""))
+                color = self.app.colors['recorded'] if has_interact else self.app.colors['not_recorded']
+                text = "Ready" if has_interact else "Not Set"
+                self.app.keycard_interact_indicator.configure(text_color=color, text=text)
         except Exception as e:
             print(f"[ERROR] Failed to update indicators: {e}")

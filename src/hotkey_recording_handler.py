@@ -10,7 +10,7 @@ class HotkeyRecordingHandler:
     
     def on_key_press(self, event):
         # Check if any recording is active
-        if not self.app.recording_triggernade and not self.app.recording_mine and not self.app.recording_snap and not self.app.recording_keycard and not self.app.recording_dc_both and not self.app.recording_dc_outbound and not self.app.recording_dc_inbound and not self.app.recording_tamper:
+        if not self.app.recording_triggernade and not self.app.recording_mine and not self.app.recording_snap and not self.app.recording_keycard and not self.app.recording_keycard_interact and not self.app.recording_dc_both and not self.app.recording_dc_outbound and not self.app.recording_dc_inbound and not self.app.recording_tamper:
             return
 
         # Use keyboard library to check modifiers (tkinter state flags are unreliable)
@@ -92,6 +92,10 @@ class HotkeyRecordingHandler:
                 self.app.keycard_hotkey_var.set("")
                 self.app.keycard_record_btn.configure(text="Keybind")
                 self.app.recording_keycard = False
+            elif self.app.recording_keycard_interact:
+                self.app.keycard_interact_key_var.set("")
+                self.app.keycard_interact_record_btn.configure(text="Keybind")
+                self.app.recording_keycard_interact = False
             elif self.app.recording_dc_both:
                 self.app.dc_both_hotkey_var.set("")
                 self.app.dc_both_record_btn.configure(text="Set")
@@ -151,6 +155,10 @@ class HotkeyRecordingHandler:
                 self.app.keycard_hotkey_var.set(hotkey)
                 self.app.keycard_record_btn.configure(text="Keybind")
                 self.app.recording_keycard = False
+            elif self.app.recording_keycard_interact:
+                self.app.keycard_interact_key_var.set(hotkey)
+                self.app.keycard_interact_record_btn.configure(text="Keybind")
+                self.app.recording_keycard_interact = False
             elif self.app.recording_dc_both:
                 self.app.dc_both_hotkey_var.set(hotkey)
                 self.app.dc_both_record_btn.configure(text="Record")

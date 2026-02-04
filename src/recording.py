@@ -100,6 +100,23 @@ class RecordingManager:
         self.app.root.bind("<KeyPress>", self.app.on_key_press)
         self.app.root.focus_force()
     
+    def start_recording_keycard_interact(self):
+        """Record interact key for keycard dupe (in-game key to interact with items)"""
+        self.app._recording_previous_value = self.app.keycard_interact_key_var.get()
+        self.app.recording_keycard_interact = True
+        self.app.recording_keycard = False
+        self.app.recording_mine = False
+        self.app.recording_triggernade = False
+        self.app.recording_snap = False
+        self.app.recording_dc_both = False
+        self.app.recording_dc_outbound = False
+        self.app.recording_dc_inbound = False
+        self.app.recording_tamper = False
+        self.app.keycard_interact_record_btn.configure(text="...")
+        self.app.keycard_interact_key_var.set("Press key...")
+        self.app.root.bind("<KeyPress>", self.app.on_key_press)
+        self.app.root.focus_force()
+    
     def start_recording_keycard_drag(self):
         """Record keycard drag: from inventory to drop location"""
         self.app.keycard_drag_btn.configure(text="Recording...")

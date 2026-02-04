@@ -12,7 +12,15 @@ class HotkeyManager:
         """Register all hotkeys"""
         # Clear ALL hooks first to prevent ghost hotkeys
         try:
+            # Clear all hooks multiple ways to ensure they're gone
             keyboard.unhook_all()
+            # Also clear any hotkeys that were tracked
+            for key, hook in list(self.registered_hotkeys.items()):
+                try:
+                    keyboard.remove_hotkey(hook)
+                except:
+                    pass
+            self.registered_hotkeys.clear()
             print("[HOTKEY] Cleared all previous hotkeys and hooks")
         except Exception as e:
             print(f"[HOTKEY] Error clearing hotkeys: {e}")

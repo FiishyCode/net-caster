@@ -140,16 +140,25 @@ class MacroExecutor:
             print(f"Reconnected - Initial setup complete")
 
             # ===== E spam + clicking to grab the falling object =====
-            # Fast burst to reliably grab the dropped item
-            print(f"Grabbing falling object...")
-            for _ in range(15):  # 15 fast cycles (~450ms total)
+            # Wait for item to start falling before grabbing
+            wait_before = self.app.config.get("wait_before_espam", 100)
+            self.app.vsleep(wait_before)
+            
+            # Longer E spam to reliably grab the dropped item
+            espam_duration = self.app.config.get("espam_duration", 500)
+            print(f"Grabbing falling object (wait:{wait_before}ms, spam:{espam_duration}ms)...")
+            
+            start_time = time.time()
+            while (time.time() - start_time) * 1000 < espam_duration:
+                if self.app.triggernade_stop:
+                    break
                 pynput_keyboard.press('e')
-                time.sleep(0.005)
+                time.sleep(0.008)
                 pynput_keyboard.release('e')
                 pynput_mouse.press(MouseButton.left)
-                time.sleep(0.015)
+                time.sleep(0.020)
                 pynput_mouse.release(MouseButton.left)
-                time.sleep(0.010)
+                time.sleep(0.015)
             
             # If not looping, stop here after single throw
             if not repeat:

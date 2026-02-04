@@ -10,7 +10,7 @@ class HotkeyRecordingHandler:
     
     def on_key_press(self, event):
         # Check if any recording is active
-        if not self.app.recording_triggernade and not self.app.recording_mine and not self.app.recording_snap and not self.app.recording_keycard and not self.app.recording_dc_both and not self.app.recording_dc_outbound and not self.app.recording_dc_inbound and not self.app.recording_tamper and not self.app.recording_stop:
+        if not self.app.recording_triggernade and not self.app.recording_mine and not self.app.recording_snap and not self.app.recording_keycard and not self.app.recording_dc_both and not self.app.recording_dc_outbound and not self.app.recording_dc_inbound and not self.app.recording_tamper:
             return
 
         # Use keyboard library to check modifiers (tkinter state flags are unreliable)
@@ -92,10 +92,6 @@ class HotkeyRecordingHandler:
                 self.app.keycard_hotkey_var.set("")
                 self.app.keycard_record_btn.configure(text="Keybind")
                 self.app.recording_keycard = False
-            elif self.app.recording_stop:
-                self.app.stop_hotkey_var.set("")
-                self.app.stop_record_btn.configure(text="Set")
-                self.app.recording_stop = False
             elif self.app.recording_dc_both:
                 self.app.dc_both_hotkey_var.set("")
                 self.app.dc_both_record_btn.configure(text="Set")
@@ -115,6 +111,7 @@ class HotkeyRecordingHandler:
             self.app.root.unbind("<KeyPress>")
             self.app.root.update_idletasks()  # Force GUI refresh
             self.app.save_settings()
+            self.app.indicator_manager.update_all_indicators()
             self.app.register_hotkeys()
             return
 
@@ -129,7 +126,6 @@ class HotkeyRecordingHandler:
                 self.app.mine_hotkey_var,
                 self.app.snap_hotkey_var,
                 self.app.keycard_hotkey_var,
-                self.app.stop_hotkey_var,
                 self.app.dc_both_hotkey_var,
                 self.app.dc_outbound_hotkey_var,
                 self.app.dc_inbound_hotkey_var,
@@ -155,10 +151,6 @@ class HotkeyRecordingHandler:
                 self.app.keycard_hotkey_var.set(hotkey)
                 self.app.keycard_record_btn.configure(text="Keybind")
                 self.app.recording_keycard = False
-            elif self.app.recording_stop:
-                self.app.stop_hotkey_var.set(hotkey)
-                self.app.stop_record_btn.configure(text="Record")
-                self.app.recording_stop = False
             elif self.app.recording_dc_both:
                 self.app.dc_both_hotkey_var.set(hotkey)
                 self.app.dc_both_record_btn.configure(text="Record")
@@ -177,6 +169,6 @@ class HotkeyRecordingHandler:
                 self.app.recording_tamper = False
             self.app.root.unbind("<KeyPress>")
             self.app.root.update_idletasks()  # Force GUI refresh
-            self.app.indicator_manager.update_all_indicators()  # Update recording indicators
-            self.app.save_settings()
+            self.app.save_settings()  # Save first so config is updated
+            self.app.indicator_manager.update_all_indicators()  # Then update indicators
             self.app.register_hotkeys()

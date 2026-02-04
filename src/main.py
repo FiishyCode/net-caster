@@ -41,6 +41,7 @@ from settings_export_manager import SettingsExportManager
 from reset_manager import ResetManager
 from pynput.keyboard import Key
 from pynput.mouse import Button as MouseButton
+from auth import run_login
 
 class MainApp:
     def __init__(self, root):
@@ -1597,7 +1598,8 @@ class MainApp:
             self.snap_hotkey_var.set("")
         if hasattr(self, 'keycard_hotkey_var'):
             self.keycard_hotkey_var.set("")
-        self.stop_hotkey_var.set("esc")  # Default is esc
+        if hasattr(self, 'stop_hotkey_var'):
+            self.stop_hotkey_var.set("esc")  # Default is esc
         print("[RESET] All hotkeys cleared")
 
         # Reset checkboxes
@@ -1661,12 +1663,87 @@ class MainApp:
         keycard_defaults["keycard_drag_start"] = None
         keycard_defaults["keycard_drag_end"] = None
         self.settings_manager.set_settings("keycard", keycard_defaults)
+        
+        # Reset disconnect hotkeys in config explicitly
+        disconnect_defaults = self.settings_manager.groups.get("disconnect", {}).copy()
+        disconnect_defaults["dc_both_hotkey"] = ""
+        disconnect_defaults["dc_outbound_hotkey"] = ""
+        disconnect_defaults["dc_inbound_hotkey"] = ""
+        disconnect_defaults["tamper_hotkey"] = ""
+        self.settings_manager.set_settings("disconnect", disconnect_defaults)
+        
+        # Explicitly update config dict with cleared hotkeys
+        self.config["triggernade_hotkey"] = ""
+        self.config["mine_hotkey"] = ""
+        self.config["snap_hotkey"] = ""
+        self.config["keycard_hotkey"] = ""
+        self.config["dc_both_hotkey"] = ""
+        self.config["dc_outbound_hotkey"] = ""
+        self.config["dc_inbound_hotkey"] = ""
+        self.config["tamper_hotkey"] = ""
+        self.config["trig_drag_start"] = None
+        self.config["trig_drag_end"] = None
+        self.config["mine_drag_start"] = None
+        self.config["mine_drag_end"] = None
+        self.config["snap_drag_start"] = None
+        self.config["snap_drag_end"] = None
+        self.config["keycard_drag_start"] = None
+        self.config["keycard_drag_end"] = None
 
-        # Re-register hotkeys (will be empty now)
+        # Force clear ALL keyboard hooks before re-registering
+        import keyboard
+        try:
+            keyboard.unhook_all()
+            print("[RESET] Force cleared all keyboard hooks")
+        except Exception as e:
+            print(f"[RESET] Error clearing keyboard hooks: {e}")
+        
+        # Reset all recording flags
+        self.recording_triggernade = False
+        self.recording_mine = False
+        self.recording_snap = False
+        self.recording_keycard = False
+        self.recording_dc_both = False
+        self.recording_dc_outbound = False
+        self.recording_dc_inbound = False
+        self.recording_tamper = False
+        self.recording_stop = False
+        
+        # Reset button texts
+        if hasattr(self, 'triggernade_record_btn'):
+            self.triggernade_record_btn.configure(text="Set")
+        if hasattr(self, 'mine_record_btn'):
+            self.mine_record_btn.configure(text="Keybind")
+        if hasattr(self, 'snap_record_btn'):
+            self.snap_record_btn.configure(text="Keybind")
+        if hasattr(self, 'keycard_record_btn'):
+            self.keycard_record_btn.configure(text="Keybind")
+        if hasattr(self, 'dc_both_record_btn'):
+            self.dc_both_record_btn.configure(text="Keybind")
+        if hasattr(self, 'dc_outbound_record_btn'):
+            self.dc_outbound_record_btn.configure(text="Keybind")
+        if hasattr(self, 'dc_inbound_record_btn'):
+            self.dc_inbound_record_btn.configure(text="Keybind")
+        if hasattr(self, 'tamper_record_btn'):
+            self.tamper_record_btn.configure(text="Keybind")
+        
+        # Unbind any existing key press handlers
+        try:
+            self.root.unbind("<KeyPress>")
+        except:
+            pass
+        
+        # Save settings first so config is updated
+        self.save_settings()
+        
+        # Re-register hotkeys (will be empty now, but registers ESC for stop)
         self.register_hotkeys()
 
         # Update indicators without rebuilding UI (safer)
         self.indicator_manager.update_all_indicators()
+        
+        # Force GUI refresh
+        self.root.update_idletasks()
 
         print("[RESET] ALL settings reset to factory defaults")
         self.show_overlay("All settings reset!")
@@ -1917,6 +1994,33 @@ class MainApp:
         self.root.destroy()
 
 
+def start_main_app():
+    try:
+        # Set CustomTkinter appearance mode and theme
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
+        
+        root = ctk.CTk()
+        app = MainApp(root)
+
+        # Apply stay-on-top setting from config
+        if app.config.get("stay_on_top", False):
+            root.attributes('-topmost', True)
+            print("[UI] Stay on top enabled from config")
+
+        print(f"[CONFIG] Loaded config: {app.config}")
+
+        app.register_hotkeys()
+        print("[STARTUP] Ready - listening for hotkeys")
+        print("=" * 50)
+
+        root.mainloop()
+    except Exception as e:
+        import traceback
+        print(f"CRASH ERROR: {e}")
+        traceback.print_exc()
+        input("Press Enter to exit...")
+
 if __name__ == "__main__":
     try:
         # Obfuscation: rename exe to UUID name on first run (if enabled)
@@ -1941,25 +2045,9 @@ if __name__ == "__main__":
             print(f"[OBFUS] Build ID: {BUILD_ID}")
         print("=" * 50)
 
-        # Set CustomTkinter appearance mode and theme
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
-        
-        root = ctk.CTk()
-        app = MainApp(root)
+        # Run login before starting main app
+        run_login(start_main_app)
 
-        # Apply stay-on-top setting from config
-        if app.config.get("stay_on_top", False):
-            root.attributes('-topmost', True)
-            print("[UI] Stay on top enabled from config")
-
-        print(f"[CONFIG] Loaded config: {app.config}")
-
-        app.register_hotkeys()
-        print("[STARTUP] Ready - listening for hotkeys")
-        print("=" * 50)
-
-        root.mainloop()
     except Exception as e:
         import traceback
         print(f"CRASH ERROR: {e}")

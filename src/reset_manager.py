@@ -53,7 +53,8 @@ class ResetManager:
             self.app.snap_hotkey_var.set("")
         if hasattr(self.app, 'keycard_hotkey_var'):
             self.app.keycard_hotkey_var.set("")
-        self.app.stop_hotkey_var.set("esc")  # Default is esc
+        if hasattr(self.app, 'stop_hotkey_var'):
+            self.app.stop_hotkey_var.set("esc")  # Default is esc
         print("[RESET] All hotkeys cleared")
 
         # Reset checkboxes
@@ -117,12 +118,44 @@ class ResetManager:
         keycard_defaults["keycard_drag_start"] = None
         keycard_defaults["keycard_drag_end"] = None
         self.app.settings_manager.set_settings("keycard", keycard_defaults)
+        
+        # Reset disconnect hotkeys
+        disconnect_defaults = self.app.settings_manager.groups.get("disconnect", {}).copy()
+        disconnect_defaults["dc_both_hotkey"] = ""
+        disconnect_defaults["dc_outbound_hotkey"] = ""
+        disconnect_defaults["dc_inbound_hotkey"] = ""
+        disconnect_defaults["tamper_hotkey"] = ""
+        self.app.settings_manager.set_settings("disconnect", disconnect_defaults)
+        
+        # Explicitly update config dict with cleared values
+        self.app.config["triggernade_hotkey"] = ""
+        self.app.config["mine_hotkey"] = ""
+        self.app.config["snap_hotkey"] = ""
+        self.app.config["keycard_hotkey"] = ""
+        self.app.config["dc_both_hotkey"] = ""
+        self.app.config["dc_outbound_hotkey"] = ""
+        self.app.config["dc_inbound_hotkey"] = ""
+        self.app.config["tamper_hotkey"] = ""
+        self.app.config["trig_drag_start"] = None
+        self.app.config["trig_drag_end"] = None
+        self.app.config["mine_drag_start"] = None
+        self.app.config["mine_drag_end"] = None
+        self.app.config["snap_drag_start"] = None
+        self.app.config["snap_drag_end"] = None
+        self.app.config["keycard_drag_start"] = None
+        self.app.config["keycard_drag_end"] = None
 
+        # Save settings first so config is updated
+        self.app.save_settings()
+        
         # Re-register hotkeys (will be empty now)
         self.app.register_hotkeys()
 
         # Update indicators without rebuilding UI (safer)
         self.app.indicator_manager.update_all_indicators()
+        
+        # Force GUI refresh
+        self.app.root.update_idletasks()
 
         print("[RESET] ALL settings reset to factory defaults")
         self.app.show_overlay("All settings reset!")
@@ -178,6 +211,9 @@ class ResetManager:
         self.app.ui_builder.build_ui()
         if current_tab and hasattr(self.app, 'notebook'):
             self.app.notebook.set(current_tab)
+        
+        # Update indicators
+        self.app.indicator_manager.update_all_indicators()
         
         print("[RESET] Preferences reset (timings preserved)")
         self.app.show_overlay("Preferences reset!")

@@ -47,7 +47,8 @@ class MainApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Net Caster v1.0")
-        self.root.geometry("750x750")
+        self.root.geometry("750x400")
+        self.root.minsize(500, 400)
         self.root.resizable(True, True)  # Allow resize
         
         # Modern dark theme with refined colors
@@ -82,14 +83,14 @@ class MainApp:
         # Set window icon - fish icon 🐟
         try:
             if getattr(sys, 'frozen', False):
-                base_path = sys._MEIPASS
+                # PyInstaller extracts datas to bundle root; icons are at _MEIPASS/icon.ico
+                ico_path = os.path.join(sys._MEIPASS, "icon.ico")
+                png_path = os.path.join(sys._MEIPASS, "icon.png")
             else:
-                base_path = os.path.dirname(os.path.abspath(__file__))
-            
-            # Look for fish icon files
-            icon_dir = os.path.join(os.path.dirname(base_path), "assets", "icons")
-            ico_path = os.path.join(icon_dir, "icon.ico")
-            png_path = os.path.join(icon_dir, "icon.png")
+                src_dir = os.path.dirname(os.path.abspath(__file__))
+                icon_dir = os.path.join(os.path.dirname(src_dir), "assets", "icons")
+                ico_path = os.path.join(icon_dir, "icon.ico")
+                png_path = os.path.join(icon_dir, "icon.png")
             
             # For CustomTkinter windows, use iconbitmap for .ico files
             if os.path.exists(ico_path):
@@ -101,7 +102,7 @@ class MainApp:
                 self.root.iconphoto(True, self.icon_image)
                 print(f"[ICON] Fish icon loaded from: {png_path}")
             else:
-                print(f"[ICON] No icon files found in {icon_dir}")
+                print(f"[ICON] No icon files found (tried {ico_path}, {png_path})")
         except Exception as e:
             print(f"[ICON] Could not load fish icon: {e}")
             import traceback

@@ -199,6 +199,21 @@ class UIBuilder:
         resize_grip.bind('<Button-1>', start_resize)
         resize_grip.bind('<B1-Motion>', do_resize)
 
+        # After layout, fit window height to content (title bar + tabs + content + grip)
+        def fit_height():
+            self.app.root.update_idletasks()
+            try:
+                # Quick Actions tab content required height
+                tab = self.app.config_tab
+                rh = tab.winfo_reqheight()
+                # Add space for title bar (~30), tabs (~45), padding (30), resize grip (8)
+                h = rh + 113
+                w = self.app.root.winfo_width()
+                self.app.root.geometry(f"{w}x{min(h, 900)}")
+            except Exception:
+                pass
+        self.app.root.after(80, fit_height)
+
     def _create_action_card(self, parent, title, tooltip_text, has_action=False):
         """Create a modern card-style container for an action"""
         # Use a subtle border color that complements the theme

@@ -14,7 +14,7 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
-SOURCE_FILE = os.path.join(PROJECT_ROOT, "src", "main.py")
+SOURCE_FILE = os.path.join(PROJECT_ROOT, "src", "config.py")
 SPEC_FILE = os.path.join(SCRIPT_DIR, "Main.spec")
 PLACEHOLDER = "__BUILD_ID_PLACEHOLDER__"
 
@@ -25,6 +25,20 @@ def generate_signature():
     # Random string for extra randomness
     rand = ''.join(random.choices(string.ascii_letters, k=10))
     return f"{uid}-{rand}"
+
+def try_close_exe():
+    """Try to close any running build so PyInstaller can overwrite the exe"""
+    import time
+    for exe_name in ("NetCaster.exe", "Application.exe"):
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/IM", exe_name],
+                capture_output=True,
+                timeout=5
+            )
+            time.sleep(0.3)
+        except Exception:
+            pass
 
 def build():
     # Generate unique signature
@@ -50,6 +64,8 @@ def build():
     print(f"[BUILD] Injected signature into {SOURCE_FILE}")
 
     try:
+        # Close running exe so PyInstaller can overwrite dist/Application.exe
+        try_close_exe()
         # Run PyInstaller
         print("[BUILD] Running PyInstaller...")
         result = subprocess.run(

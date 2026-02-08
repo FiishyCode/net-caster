@@ -456,6 +456,94 @@ class MacroExecutor:
             self.app.root.after(0, lambda: self.app.mine_status_label.configure(foreground="gray"))
             self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready('mine'))
             self.app.root.after(0, lambda: self.app.show_overlay("Mine Dupe stopped."))
+
+    def run_cook_drop_macro(self):
+        """
+        Cook DC Drop: same flow as deployable but no E pickup.
+        Cook (M1 hold) -> DC -> open inv -> drag to drop -> close inv -> reconnect.
+        Uses its own timings (cook_drop_*) and reuses mine_drag_start/end.
+        """
+        is_disconnected = False
+
+        if not self.app.mine_drag_start or not self.app.mine_drag_end:
+            self.app.root.after(0, lambda: self.app.show_overlay("Record drag path first (Deployable Action)!", force=True))
+            self.app.cook_drop_running = False
+            self.app.root.after(0, lambda: self.app.cook_drop_status_var.set("Ready"))
+            return
+
+        pynput_mouse.release(MouseButton.left)
+        pynput_mouse.release(MouseButton.right)
+        pynput_keyboard.release(Key.tab)
+        time.sleep(0.2)
+
+        try:
+            if self.app.cook_drop_stop:
+                return
+
+            cook_time = self.app.cook_drop_cook_var.get()
+            dc_delay = self.app.cook_drop_dc_delay_var.get()
+            pre_close = self.app.cook_drop_pre_close_var.get()
+            tab_hold = self.app.cook_drop_tab_hold_var.get()
+            close_reconnect = self.app.cook_drop_close_reconnect_var.get()
+            drag_speed = self.app.cook_drop_drag_speed_var.get()
+
+            pynput_mouse.release(MouseButton.left)
+            self.app.vsleep(50)
+
+            # 1. M1 press (cook)
+            pynput_mouse.press(MouseButton.left)
+            self.app.vsleep(cook_time)
+            pynput_mouse.release(MouseButton.left)
+            self.app.vsleep(80)
+
+            # 2. TAB open
+            pynput_keyboard.press(Key.tab)
+            self.app.vsleep(dc_delay)
+            start_packet_drop(inbound=False)
+            is_disconnected = True
+            self.app.vsleep(24)
+            pynput_keyboard.release(Key.tab)
+
+            if self.app.cook_drop_stop:
+                return
+
+            # 3. Drag to drop
+            self.app.vsleep(200 + random.randint(0, 100))
+            pynput_mouse.position = self.app.mine_drag_start
+            self.app.vsleep(30 + random.randint(0, 20))
+            pynput_mouse.press(MouseButton.left)
+            varied_speed = drag_speed + random.randint(-2, 2)
+            self.app.curved_drag(self.app.mine_drag_start, self.app.mine_drag_end, steps=25, step_delay=max(3, varied_speed))
+            pynput_mouse.release(MouseButton.left)
+
+            if self.app.cook_drop_stop:
+                return
+
+            # 4. TAB close then reconnect
+            self.app.vsleep(pre_close)
+            pynput_keyboard.press(Key.tab)
+            self.app.vsleep(tab_hold)
+            pynput_keyboard.release(Key.tab)
+            self.app.vsleep(close_reconnect)
+            stop_packet_drop()
+            is_disconnected = False
+
+            # 5. Cook again (ready for next use)
+            if not self.app.cook_drop_stop:
+                self.app.vsleep(80)
+                pynput_mouse.press(MouseButton.left)
+                self.app.vsleep(cook_time)
+                pynput_mouse.release(MouseButton.left)
+        finally:
+            pynput_mouse.release(MouseButton.left)
+            pynput_keyboard.release(Key.tab)
+            if is_disconnected:
+                stop_packet_drop()
+            self.app.cook_drop_running = False
+            self.app.cook_drop_stop = False
+            self.app.root.after(0, lambda: self.app.cook_drop_status_var.set("Ready"))
+            self.app.root.after(0, lambda: self.app.indicator_manager.set_indicator_ready("cook_drop"))
+            self.app.root.after(0, lambda: self.app.show_overlay("Cook DC Drop done."))
     
     def execute_snap_action(self):
         """Execute the snaphook action: open inv, drag item, close inv - optimized for speed"""

@@ -26,6 +26,7 @@ class IndicatorManager:
         indicator_map = {
             'triggernade': 'trig_indicator',
             'mine': 'mine_indicator',
+            'cook_drop': 'cook_drop_indicator',
             'snaphook': 'snap_indicator',
             'keycard': 'keycard_indicator',
             'dc_both': 'dc_both_indicator'
@@ -40,6 +41,7 @@ class IndicatorManager:
         indicator_map = {
             'triggernade': 'trig_indicator',
             'mine': 'mine_indicator',
+            'cook_drop': 'cook_drop_indicator',
             'snaphook': 'snap_indicator',
             'keycard': 'keycard_indicator',
             'dc_both': 'dc_both_indicator'
@@ -75,6 +77,13 @@ class IndicatorManager:
                 color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
                 text = "Ready" if is_recorded else "Not Set"
                 self.app.mine_indicator.configure(text_color=color, text=text)
+
+            # Update Cook DC Drop indicator
+            if hasattr(self.app, 'cook_drop_indicator'):
+                is_recorded = self.app._is_action_recorded('cook_drop')
+                color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
+                text = "Ready" if is_recorded else "Not Set"
+                self.app.cook_drop_indicator.configure(text_color=color, text=text)
             
             # Update Snaphook indicator
             if hasattr(self.app, 'snap_indicator'):

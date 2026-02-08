@@ -6,10 +6,10 @@ import requests
 import hashlib
 import customtkinter as ctk
 from tkinter import messagebox
+import tkinter as tk
 
-# Firebase Configuration (From your website)
-FIREBASE_API_KEY = "AIzaSyDnrzO83I49pElBGTtS8nBrcJSbgmXE3hg"
-PROJECT_ID = "fiishy"
+# Cloud Function URL for license verification (bypasses Firestore rules)
+VERIFY_LICENSE_URL = "https://us-central1-fiishy.cloudfunctions.net/verifyLicense"
 
 class AuthManager:
     def __init__(self):
@@ -30,85 +30,26 @@ class AuthManager:
             return hashlib.sha256(fallback.encode()).hexdigest()
 
     def verify_license(self, email, license_key):
-        """Verify license key against Firebase Firestore"""
+        """Verify license key via Cloud Function (bypasses Firestore rules)"""
         try:
-            # 1. Sign in the user anonymously or via email if you have that setup
-            # For simplicity, we'll use the Firestore REST API directly if rules allow,
-            # but ideally you'd use a Firebase Function.
-            # Since we want to check if the EMAIL and KEY match, we'll query the users collection.
-            
-            # NOTE: For security, Firestore rules should only allow reading own doc.
-            # Here we are searching for a doc where licenseKey == license_key and email == email.
-            
-            url = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents:runQuery?key={FIREBASE_API_KEY}"
-            
-            query = {
-                "structuredQuery": {
-                    "from": [{"collectionId": "users"}],
-                    "where": {
-                        "compositeFilter": {
-                            "op": "AND",
-                            "filters": [
-                                {
-                                    "fieldFilter": {
-                                        "field": {"fieldPath": "email"},
-                                        "op": "EQUAL",
-                                        "value": {"stringValue": email}
-                                    }
-                                },
-                                {
-                                    "fieldFilter": {
-                                        "field": {"fieldPath": "licenseKey"},
-                                        "op": "EQUAL",
-                                        "value": {"stringValue": license_key}
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "limit": 1
-                }
+            payload = {
+                "email": email.strip(),
+                "licenseKey": license_key.strip(),
+                "hwid": self.hwid,
             }
-
-            response = requests.post(url, json=query)
+            response = requests.post(
+                VERIFY_LICENSE_URL,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=15,
+            )
             data = response.json()
-
-            if not data or len(data) == 0 or 'document' not in data[0]:
-                return False, "Invalid Email or License Key."
-
-            doc = data[0]['document']
-            fields = doc['fields']
-            
-            purchased = fields.get('purchased', {}).get('booleanValue', False)
-            if not purchased:
-                return False, "This account has not purchased a license."
-
-            # HWID Check
-            stored_hwid = fields.get('hwid', {}).get('stringValue', None)
-            doc_id = doc['name'].split('/')[-1]
-
-            if not stored_hwid:
-                # First time use: Bind HWID
-                self._update_hwid(doc_id, self.hwid)
-                return True, "Success! Hardware ID bound to your account."
-            elif stored_hwid != self.hwid:
-                return False, "License is bound to another computer. Contact support to reset HWID."
-
-            return True, "Welcome back!"
-
+            success = data.get("success", False)
+            message = data.get("message", "Invalid Email or License Key.")
+            return success, message
         except Exception as e:
             print(f"[AUTH] Error: {e}")
             return False, f"Connection error: {str(e)}"
-
-    def _update_hwid(self, doc_id, hwid):
-        """Update HWID in Firestore"""
-        url = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents/users/{doc_id}?updateMask.fieldPaths=hwid&key={FIREBASE_API_KEY}"
-        payload = {
-            "fields": {
-                "hwid": {"stringValue": hwid}
-            }
-        }
-        requests.patch(url, json=payload)
 
     def save_credentials(self, email, license_key):
         with open(self.auth_file, 'w') as f:
@@ -132,6 +73,24 @@ class LoginWindow(ctk.CTk):
         self.title("NetCaster - Login")
         self.geometry("400x500")
         self.resizable(False, False)
+
+        # Set window icon
+        try:
+            if getattr(sys, 'frozen', False):
+                ico_path = os.path.join(sys._MEIPASS, "icon.ico")
+                png_path = os.path.join(sys._MEIPASS, "icon.png")
+            else:
+                src_dir = os.path.dirname(os.path.abspath(__file__))
+                icon_dir = os.path.join(os.path.dirname(src_dir), "assets", "icons")
+                ico_path = os.path.join(icon_dir, "icon.ico")
+                png_path = os.path.join(icon_dir, "icon.png")
+            if os.path.exists(ico_path):
+                self.iconbitmap(ico_path)
+            elif os.path.exists(png_path):
+                self._icon_image = tk.PhotoImage(file=png_path)
+                self.iconphoto(True, self._icon_image)
+        except Exception:
+            pass
         
         # Center window
         self.update_idletasks()

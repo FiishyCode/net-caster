@@ -10,7 +10,7 @@ class HotkeyRecordingHandler:
     
     def on_key_press(self, event):
         # Check if any recording is active
-        if not self.app.recording_triggernade and not self.app.recording_mine and not self.app.recording_snap and not self.app.recording_keycard and not self.app.recording_keycard_interact and not self.app.recording_dc_both and not self.app.recording_dc_outbound and not self.app.recording_dc_inbound and not self.app.recording_tamper:
+        if not self.app.recording_triggernade and not self.app.recording_mine and not self.app.recording_cook_drop and not self.app.recording_snap and not self.app.recording_keycard and not self.app.recording_keycard_interact and not self.app.recording_dc_both and not self.app.recording_dc_outbound and not self.app.recording_dc_inbound and not self.app.recording_tamper:
             return
 
         # Use keyboard library to check modifiers (tkinter state flags are unreliable)
@@ -84,6 +84,10 @@ class HotkeyRecordingHandler:
                 self.app.mine_hotkey_var.set("")
                 self.app.mine_record_btn.configure(text="Set")
                 self.app.recording_mine = False
+            elif self.app.recording_cook_drop:
+                self.app.cook_drop_hotkey_var.set("")
+                self.app.cook_drop_record_btn.configure(text="Keybind")
+                self.app.recording_cook_drop = False
             elif self.app.recording_snap:
                 self.app.snap_hotkey_var.set("")
                 self.app.snap_record_btn.configure(text="Keybind")
@@ -128,6 +132,7 @@ class HotkeyRecordingHandler:
             all_hotkey_vars = [
                 self.app.triggernade_hotkey_var,
                 self.app.mine_hotkey_var,
+                self.app.cook_drop_hotkey_var if hasattr(self.app, "cook_drop_hotkey_var") else None,
                 self.app.snap_hotkey_var,
                 self.app.keycard_hotkey_var,
                 self.app.dc_both_hotkey_var,
@@ -135,6 +140,7 @@ class HotkeyRecordingHandler:
                 self.app.dc_inbound_hotkey_var,
                 self.app.tamper_hotkey_var,
             ]
+            all_hotkey_vars = [v for v in all_hotkey_vars if v is not None]
             for var in all_hotkey_vars:
                 if var.get() == hotkey:
                     var.set("")
@@ -147,6 +153,10 @@ class HotkeyRecordingHandler:
                 self.app.mine_hotkey_var.set(hotkey)
                 self.app.mine_record_btn.configure(text="Keybind")
                 self.app.recording_mine = False
+            elif self.app.recording_cook_drop:
+                self.app.cook_drop_hotkey_var.set(hotkey)
+                self.app.cook_drop_record_btn.configure(text="Keybind")
+                self.app.recording_cook_drop = False
             elif self.app.recording_snap:
                 self.app.snap_hotkey_var.set(hotkey)
                 self.app.snap_record_btn.configure(text="Keybind")

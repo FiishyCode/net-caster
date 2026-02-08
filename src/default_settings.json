@@ -46,6 +46,15 @@
     "mine_drag_start": [3032, 1236],
     "mine_drag_end": [3171, 1593]
   },
+  "cook_drop": {
+    "cook_drop_hotkey": "",
+    "cook_drop_cook": 200,
+    "cook_drop_dc_delay": 80,
+    "cook_drop_drag_speed": 10,
+    "cook_drop_pre_close": 120,
+    "cook_drop_tab_hold": 60,
+    "cook_drop_close_reconnect": 350
+  },
   "snaphook": {
     "snap_hotkey": "",
     "snap_drag_start": null,

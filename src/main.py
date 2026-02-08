@@ -41,7 +41,8 @@ from settings_export_manager import SettingsExportManager
 from reset_manager import ResetManager
 from pynput.keyboard import Key
 from pynput.mouse import Button as MouseButton
-from auth import run_login
+from auth import run_login, AuthManager
+from heartbeat import start_heartbeat, stop_heartbeat
 
 class MainApp:
     def __init__(self, root):
@@ -153,6 +154,9 @@ class MainApp:
         self.mine_running = False
         self.mine_stop = False
         self.mine_hotkey_registered = None
+        self.cook_drop_running = False
+        self.cook_drop_stop = False
+        self.cook_drop_hotkey_registered = None
         self.escape_hotkey_registered = None
         # Stop All state
         self.recording_stop = False
@@ -169,6 +173,7 @@ class MainApp:
         self.recording_tamper = False
         self.recording_triggernade = False
         self.recording_mine = False
+        self.recording_cook_drop = False
         self.recording_snap = False
         self.recording_keycard = False
         self.recording_keycard_interact = False
@@ -182,6 +187,7 @@ class MainApp:
         # Locks to prevent race conditions in hotkey handlers
         self._mine_lock = threading.Lock()
         self._triggernade_lock = threading.Lock()
+        self._cook_drop_lock = threading.Lock()
 
         # Overlay (will be initialized after show_overlay_var is created)
         self.overlay = None
@@ -973,6 +979,10 @@ class MainApp:
     def start_recording_mine_drag(self):
         """Delegate to recording manager"""
         return self.recording_manager.start_recording_mine_drag()
+
+    def start_recording_cook_drop(self):
+        """Delegate to recording manager"""
+        return self.recording_manager.start_recording_cook_drop()
     
     def start_recording_snap(self):
         """Delegate to recording manager"""
@@ -1694,6 +1704,9 @@ class MainApp:
         mine_defaults["mine_drag_start"] = None
         mine_defaults["mine_drag_end"] = None
         self.settings_manager.set_settings("mine", mine_defaults)
+
+        cook_drop_defaults = self.settings_manager.groups.get("cook_drop", {}).copy()
+        self.settings_manager.set_settings("cook_drop", cook_drop_defaults)
         
         # Clear snaphook and keycard positions
         snap_defaults = self.settings_manager.groups.get("snaphook", {}).copy()
@@ -1719,6 +1732,9 @@ class MainApp:
         # Explicitly update config dict with cleared hotkeys
         self.config["triggernade_hotkey"] = ""
         self.config["mine_hotkey"] = ""
+        if hasattr(self, 'cook_drop_hotkey_var'):
+            self.cook_drop_hotkey_var.set("")
+        self.config["cook_drop_hotkey"] = ""
         self.config["snap_hotkey"] = ""
         self.config["keycard_hotkey"] = ""
         self.config["keycard_interact_key"] = "e"
@@ -1747,6 +1763,7 @@ class MainApp:
         # Reset all recording flags
         self.recording_triggernade = False
         self.recording_mine = False
+        self.recording_cook_drop = False
         self.recording_snap = False
         self.recording_keycard = False
         self.recording_keycard_interact = False
@@ -1761,6 +1778,8 @@ class MainApp:
             self.triggernade_record_btn.configure(text="Set")
         if hasattr(self, 'mine_record_btn'):
             self.mine_record_btn.configure(text="Keybind")
+        if hasattr(self, 'cook_drop_record_btn'):
+            self.cook_drop_record_btn.configure(text="Keybind")
         if hasattr(self, 'snap_record_btn'):
             self.snap_record_btn.configure(text="Keybind")
         if hasattr(self, 'keycard_record_btn'):
@@ -1886,6 +1905,7 @@ class MainApp:
                 # Try to detect from keys
                 if "triggernade_hotkey" in data: self._set_triggernade_settings(data)
                 if "mine_hotkey" in data: self._set_mine_settings(data)
+                if "cook_drop_hotkey" in data: self.settings_manager.set_settings("cook_drop", data)
             self.register_hotkeys()
             print(f"[IMPORT] Settings loaded from {path}")
 
@@ -1902,6 +1922,7 @@ class MainApp:
         print("[HOTKEY] Stop All pressed - stopping all macros!")
         self.triggernade_stop = True
         self.mine_stop = True
+        self.cook_drop_stop = True
         # Also cancel any active recordings
         self._drag_recording_cancelled = True
         self._mine_recording_cancelled = True
@@ -1987,6 +2008,32 @@ class MainApp:
         """Delegate to MacroExecutor"""
         return self.macro_executor.run_mine_macro()
 
+    def on_cook_drop_hotkey(self):
+        """Run Cook DC Drop macro (cook, DC, drop, reconnect, no E pickup)"""
+        if not self._cook_drop_lock.acquire(blocking=False):
+            return
+        try:
+            if self.cook_drop_running:
+                self.cook_drop_stop = True
+                self.root.after(0, lambda: self.cook_drop_status_var.set("Stopping..."))
+            else:
+                self.cook_drop_stop = False
+                self.triggernade_stop = False
+                self.mine_stop = False
+                self.cook_drop_running = True
+                self.root.after(0, lambda: self.cook_drop_status_var.set("RUNNING"))
+                if hasattr(self, "cook_drop_indicator"):
+                    self.root.after(0, lambda: self.cook_drop_indicator.configure(text_color=self.colors["highlight"]))
+                self.root.after(0, lambda: self.indicator_manager.set_indicator_running("cook_drop"))
+                self.root.after(0, lambda: self.show_overlay("Cook DC Drop started"))
+                threading.Thread(target=self.macro_executor.run_cook_drop_macro, daemon=True).start()
+        finally:
+            self._cook_drop_lock.release()
+
+    def run_cook_drop_macro(self):
+        """Delegate to MacroExecutor"""
+        return self.macro_executor.run_cook_drop_macro()
+
     def show_overlay(self, text, force=False):
         """Show overlay message - delegates to OverlayManager"""
         if self.overlay is None:
@@ -2014,6 +2061,9 @@ class MainApp:
     def on_close(self):
         self.triggernade_stop = True
         self.mine_stop = True
+        self.cook_drop_stop = True
+
+        stop_heartbeat()
 
         # ALWAYS ensure network is restored on close
         try:
@@ -2048,6 +2098,11 @@ def start_main_app():
         # Set CustomTkinter appearance mode and theme
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
+
+        auth = AuthManager()
+        creds = auth.load_credentials()
+        if creds and creds.get("license_key"):
+            start_heartbeat(creds["license_key"])
         
         root = ctk.CTk()
         app = MainApp(root)

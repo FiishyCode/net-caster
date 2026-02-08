@@ -100,6 +100,7 @@ class SettingsManager:
         return {
             "triggernade": self.get_settings("triggernade"),
             "mine": self.get_settings("mine"),
+            "cook_drop": self.get_settings("cook_drop"),
             "snaphook": self.get_settings("snaphook"),
             "keycard": self.get_settings("keycard"),
             "disconnect": self.get_settings("disconnect"),

@@ -33,14 +33,17 @@ class HotkeyManager:
         self.app.dc_inbound_hotkey_registered = None
         self.app.tamper_hotkey_registered = None
         self.app.mine_hotkey_registered = None
+        self.app.cook_drop_hotkey_registered = None
         self.app.snap_hotkey_registered = None
         self.app.keycard_hotkey_registered = None
         self.app.trig_rerecord_registered = None
         self.app.mine_rerecord_registered = None
+        self.app.cook_drop_rerecord_registered = None
 
         # Register main action hotkeys
         self._register_triggernade()
         self._register_mine()
+        self._register_cook_drop()
         self._register_snap()
         self._register_keycard()
         self._register_disconnect_hotkeys()
@@ -70,6 +73,20 @@ class HotkeyManager:
                 print(f"[HOTKEY] Mine registered OK: '{mine_hk}'")
             except Exception as e:
                 print(f"[HOTKEY] FAILED mine '{mine_hk}': {e}")
+
+    def _register_cook_drop(self):
+        """Register Cook DC Drop hotkey"""
+        if not hasattr(self.app, "cook_drop_hotkey_var"):
+            return
+        hk = self.app.cook_drop_hotkey_var.get()
+        if hk and hk != "Press key...":
+            try:
+                self.app.cook_drop_hotkey_registered = keyboard.add_hotkey(
+                    hk, self.app.on_cook_drop_hotkey, suppress=False
+                )
+                print(f"[HOTKEY] Cook DC Drop registered OK: '{hk}'")
+            except Exception as e:
+                print(f"[HOTKEY] FAILED cook_drop '{hk}': {e}")
     
     def _register_snap(self):
         """Register snaphook hotkey"""
@@ -176,3 +193,16 @@ class HotkeyManager:
                 print(f"[HOTKEY] Mine re-record registered: '{alt_mine_hk}'")
             except Exception as e:
                 print(f"[HOTKEY] FAILED mine re-record '{alt_mine_hk}': {e}")
+
+        # Cook DC Drop: Alt+hotkey = re-record drag (uses mine drag path)
+        if hasattr(self.app, "cook_drop_hotkey_var"):
+            cd_hk = self.app.cook_drop_hotkey_var.get()
+            if cd_hk and cd_hk != "Press key...":
+                try:
+                    alt_cd_hk = f"alt+{cd_hk}" if not cd_hk.startswith("alt+") else cd_hk
+                    self.app.cook_drop_rerecord_registered = keyboard.add_hotkey(
+                        alt_cd_hk, self.app.start_mine_drag_recording, suppress=False
+                    )
+                    print(f"[HOTKEY] Cook DC Drop re-record registered: '{alt_cd_hk}'")
+                except Exception as e:
+                    print(f"[HOTKEY] FAILED cook_drop re-record '{alt_cd_hk}': {e}")

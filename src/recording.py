@@ -13,6 +13,7 @@ class RecordingManager:
         self.app._recording_previous_value = self.app.mine_hotkey_var.get()
         self.app.recording_mine = True
         self.app.recording_triggernade = False
+        self.app.recording_cook_drop = False
         self.app.recording_dc_both = False
         self.app.recording_dc_outbound = False
         self.app.recording_dc_inbound = False
@@ -25,6 +26,21 @@ class RecordingManager:
     def start_recording_mine_drag(self):
         """Wrapper to start mine drag action recording"""
         self.app.start_mine_drag_recording()
+
+    def start_recording_cook_drop(self):
+        """Record keybind for Cook DC Drop"""
+        self.app._recording_previous_value = self.app.cook_drop_hotkey_var.get()
+        self.app.recording_cook_drop = True
+        self.app.recording_mine = False
+        self.app.recording_triggernade = False
+        self.app.recording_dc_both = False
+        self.app.recording_dc_outbound = False
+        self.app.recording_dc_inbound = False
+        self.app.recording_tamper = False
+        self.app.cook_drop_record_btn.configure(text="...")
+        self.app.cook_drop_hotkey_var.set("Press key...")
+        self.app.root.bind("<KeyPress>", self.app.on_key_press)
+        self.app.root.focus_force()
     
     def start_recording_snap(self):
         """Record keybind for snaphook"""

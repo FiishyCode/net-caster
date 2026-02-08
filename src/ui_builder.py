@@ -150,14 +150,15 @@ class UIBuilder:
         container = ctk.CTkFrame(self.app.root, fg_color=self.app.colors['bg'], corner_radius=0)
         container.pack(fill='both', expand=True, padx=0, pady=0)
 
-        self.app.canvas = ctk.CTkFrame(
+        self.app.scrollable_frame = ctk.CTkScrollableFrame(
             container,
             fg_color=self.app.colors['bg'],
-            corner_radius=0
+            corner_radius=0,
+            scrollbar_button_color=self.app.colors['bg_light'],
+            scrollbar_button_hover_color=self.app.colors['hover'],
         )
-        self.app.canvas.pack(fill='both', expand=True, padx=15, pady=15)
-        
-        self.app.scrollable_frame = self.app.canvas
+        self.app.scrollable_frame.pack(fill='both', expand=True, padx=15, pady=15)
+        self.app.canvas = self.app.scrollable_frame
         frame = self.app.scrollable_frame
 
         self.app.notebook = ctk.CTkTabview(
@@ -199,17 +200,14 @@ class UIBuilder:
         resize_grip.bind('<Button-1>', start_resize)
         resize_grip.bind('<B1-Motion>', do_resize)
 
-        # After layout, fit window height to content (title bar + tabs + content + grip)
         def fit_height():
             self.app.root.update_idletasks()
             try:
-                # Quick Actions tab content required height
                 tab = self.app.config_tab
                 rh = tab.winfo_reqheight()
-                # Add space for title bar (~30), tabs (~45), padding (30), resize grip (8)
                 h = rh + 113
                 w = self.app.root.winfo_width()
-                self.app.root.geometry(f"{w}x{min(h, 900)}")
+                self.app.root.geometry(f"{w}x{min(max(h, 450), 900)}")
             except Exception:
                 pass
         self.app.root.after(80, fit_height)
@@ -272,6 +270,10 @@ class UIBuilder:
             has_hotkey = bool(self.app.config.get("mine_hotkey", ""))
             has_drag = self.app.config.get("mine_drag_start") and self.app.config.get("mine_drag_end")
             return has_hotkey and has_drag
+        elif action_type == 'cook_drop':
+            has_hotkey = bool(self.app.config.get("cook_drop_hotkey", ""))
+            has_drag = self.app.config.get("mine_drag_start") and self.app.config.get("mine_drag_end")
+            return has_hotkey and has_drag
         elif action_type == 'snaphook':
             has_hotkey = bool(self.app.config.get("snap_hotkey", ""))
             has_drag = self.app.config.get("snap_drag_start") and self.app.config.get("snap_drag_end")
@@ -293,6 +295,7 @@ class UIBuilder:
     def _build_config_tab(self):
         """Build the Config tab with keybind controls only"""
         frame = self.app.config_tab
+        self._init_hidden_variables(frame)
 
         actions_header = ctk.CTkLabel(
             frame, 
@@ -699,10 +702,9 @@ class UIBuilder:
         self.app.mine_drag_btn.pack(side='left')
 
         card, keycard_frame = self._create_action_card(frame, "🔑 Keycard", "Interact → 0.2s → DC → Open inv → Drag to drop → Reconnect", has_action=True)
-        
+
         left_side = ctk.CTkFrame(keycard_frame, fg_color="transparent")
         left_side.pack(side='left', fill='x', expand=True)
-        
         title_label = ctk.CTkLabel(
             left_side,
             text="🔑 Keycard",
@@ -712,7 +714,6 @@ class UIBuilder:
         )
         title_label.pack(side='top', anchor='w')
         ToolTip(title_label, "Dupes keycards for rooms and hatches.\nWorks on all keycard types.\nThe dupe is consumed on use, but you keep the original.", self.app.colors)
-        
         desc_label = ctk.CTkLabel(
             left_side,
             text="Interact → 0.2s → DC → Open inv → Drag to drop → Reconnect",
@@ -720,14 +721,11 @@ class UIBuilder:
             text_color=self.app.colors['text_dim']
         )
         desc_label.pack(side='top', anchor='w')
-        
         controls_frame = ctk.CTkFrame(keycard_frame, fg_color="transparent")
         controls_frame.pack(side='right', padx=(10, 0))
-        
         is_recorded = self._is_action_recorded('keycard')
         status_text = "Ready" if is_recorded else "Not Set"
         status_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
-        
         self.app.keycard_indicator = ctk.CTkLabel(
             controls_frame,
             text=status_text,
@@ -736,10 +734,8 @@ class UIBuilder:
             width=50
         )
         self.app.keycard_indicator.pack(side='left', padx=(0, 8))
-        
         keybind_section = ctk.CTkFrame(controls_frame, fg_color="transparent")
         keybind_section.pack(side='left', padx=(0, 8))
-        
         self.app.keycard_hotkey_var = tk.StringVar(value=self.app.config.get("keycard_hotkey", ""))
         self.app.keycard_hotkey_entry = ctk.CTkEntry(
             keybind_section,
@@ -752,7 +748,6 @@ class UIBuilder:
             border_width=0
         )
         self.app.keycard_hotkey_entry.pack(side='left', padx=(0, 5))
-        
         self.app.keycard_record_btn = ctk.CTkButton(
             keybind_section,
             text="Keybind",
@@ -764,7 +759,6 @@ class UIBuilder:
             corner_radius=8
         )
         self.app.keycard_record_btn.pack(side='left')
-        
         self.app.keycard_drag_btn = ctk.CTkButton(
             controls_frame,
             text="Action",
@@ -777,7 +771,151 @@ class UIBuilder:
         )
         self.app.keycard_drag_btn.pack(side='left')
 
-        self._init_hidden_variables(frame)
+        experimental_header = ctk.CTkLabel(
+            frame, 
+            text="Experimental",
+            font=("Segoe UI", 18, "bold"),
+            text_color=self.app.colors['highlight']
+        )
+        experimental_header.pack(pady=(25, 10), padx=20, anchor='w')
+
+        card, cook_drop_frame = self._create_action_card(frame, "Cook DC Drop", "Cook → DC → Drop → Reconnect (no E pickup)", has_action=True)
+        self.app.cook_drop_expanded = getattr(self.app, 'cook_drop_expanded', False)
+
+        header_row = ctk.CTkFrame(cook_drop_frame, fg_color="transparent")
+        header_row.pack(fill='x')
+        left_side = ctk.CTkFrame(header_row, fg_color="transparent")
+        left_side.pack(side='left', fill='x', expand=True)
+        title_label = ctk.CTkLabel(
+            left_side,
+            text="🍳 Cook DC Drop",
+            font=("Segoe UI", 14, "bold"),
+            text_color=self.app.colors['text'],
+            cursor="hand2"
+        )
+        title_label.pack(side='top', anchor='w')
+        ToolTip(title_label, "Same flow as Deployable but no E pickup. Uses its own timings. Shares drag path with Deployable (Record Action on Deployable).", self.app.colors)
+        desc_label = ctk.CTkLabel(
+            left_side,
+            text="Cook → DC → Drop → Reconnect (no E pickup)",
+            font=("Segoe UI", 10),
+            text_color=self.app.colors['text_dim']
+        )
+        desc_label.pack(side='top', anchor='w')
+        controls_frame = ctk.CTkFrame(header_row, fg_color="transparent")
+        controls_frame.pack(side='right', padx=(10, 0))
+        is_recorded = self._is_action_recorded('cook_drop')
+        status_text = "Ready" if is_recorded else "Not Set"
+        status_color = self.app.colors['recorded'] if is_recorded else self.app.colors['not_recorded']
+        self.app.cook_drop_indicator = ctk.CTkLabel(
+            controls_frame,
+            text=status_text,
+            font=("Segoe UI", 9),
+            text_color=status_color,
+            width=50
+        )
+        self.app.cook_drop_indicator.pack(side='left', padx=(0, 8))
+        keybind_section = ctk.CTkFrame(controls_frame, fg_color="transparent")
+        keybind_section.pack(side='left', padx=(0, 8))
+        self.app.cook_drop_hotkey_entry = ctk.CTkEntry(
+            keybind_section,
+            textvariable=self.app.cook_drop_hotkey_var,
+            width=80,
+            height=32,
+            state="readonly",
+            fg_color=self.app.colors['bg_light'],
+            text_color=self.app.colors['text'],
+            border_width=0
+        )
+        self.app.cook_drop_hotkey_entry.pack(side='left', padx=(0, 5))
+        self.app.cook_drop_record_btn = ctk.CTkButton(
+            keybind_section,
+            text="Keybind",
+            width=70,
+            height=32,
+            command=self.app.recording_manager.start_recording_cook_drop,
+            fg_color=self.app.colors['highlight'],
+            hover_color=self.app.colors['hover'],
+            corner_radius=8
+        )
+        self.app.cook_drop_record_btn.pack(side='left')
+        cook_drop_action_btn = ctk.CTkButton(
+            controls_frame,
+            text="Action",
+            width=70,
+            height=32,
+            command=self.app.recording_manager.start_recording_mine_drag,
+            fg_color=self.app.colors['highlight'],
+            hover_color=self.app.colors['hover'],
+            corner_radius=8
+        )
+        cook_drop_action_btn.pack(side='left')
+
+        def _toggle_cook_drop_timings():
+            self.app.cook_drop_expanded = not self.app.cook_drop_expanded
+            if self.app.cook_drop_expanded:
+                self.app.cook_drop_timings_frame.pack(fill='x', pady=(12, 0))
+                self.app.cook_drop_timings_btn.configure(text="▼ Timings")
+            else:
+                self.app.cook_drop_timings_frame.pack_forget()
+                self.app.cook_drop_timings_btn.configure(text="▶ Timings")
+
+        self.app.cook_drop_timings_btn = ctk.CTkButton(
+            header_row,
+            text="▶ Timings" if not self.app.cook_drop_expanded else "▼ Timings",
+            width=90,
+            height=28,
+            font=("Segoe UI", 10),
+            fg_color=self.app.colors['bg_light'],
+            hover_color=self.app.colors['hover'],
+            text_color=self.app.colors['text_dim'],
+            corner_radius=6,
+            command=_toggle_cook_drop_timings
+        )
+        self.app.cook_drop_timings_btn.pack(side='left', padx=(0, 10))
+
+        self.app.cook_drop_timings_frame = ctk.CTkFrame(cook_drop_frame, fg_color="transparent")
+        if self.app.cook_drop_expanded:
+            self.app.cook_drop_timings_frame.pack(fill='x', pady=(12, 0))
+
+        def _cook_drop_slider_row(parent, label, var, config_key, min_val, max_val, unit="ms"):
+            row = ctk.CTkFrame(parent, fg_color="transparent")
+            row.pack(fill='x', pady=3)
+            ctk.CTkLabel(row, text=label, font=("Segoe UI", 10), text_color=self.app.colors['text_dim'], width=140, anchor='w').pack(side='left')
+            val_label = ctk.CTkLabel(row, text=f"{var.get()}{unit}", font=("Segoe UI", 10), text_color=self.app.colors['text'], width=48, anchor='e')
+            val_label.pack(side='right')
+            def _on_slide(val):
+                var.set(int(float(val)))
+                val_label.configure(text=f"{var.get()}{unit}")
+                self.app.config[config_key] = var.get()
+                from config import save_config
+                save_config(self.app.config)
+            s = ctk.CTkSlider(
+                row,
+                from_=min_val,
+                to=max_val,
+                variable=var,
+                width=160,
+                command=_on_slide,
+                fg_color=self.app.colors['bg_light'],
+                progress_color=self.app.colors['highlight'],
+                button_color=self.app.colors['highlight'],
+                button_hover_color=self.app.colors['hover']
+            )
+            s.pack(side='left', padx=8, fill='x', expand=True)
+            return row
+
+        timings_inner = ctk.CTkFrame(self.app.cook_drop_timings_frame, fg_color=self.app.colors['bg_light'], corner_radius=8, border_width=1, border_color='#2d3441')
+        timings_inner.pack(fill='x', padx=0, pady=0)
+        timings_content = ctk.CTkFrame(timings_inner, fg_color="transparent")
+        timings_content.pack(fill='x', padx=12, pady=10)
+        ctk.CTkLabel(timings_content, text="Cook DC Drop timings (ms)", font=("Segoe UI", 11, "bold"), text_color=self.app.colors['text']).pack(anchor='w', pady=(0, 6))
+        _cook_drop_slider_row(timings_content, "Cook (M1 hold)", self.app.cook_drop_cook_var, "cook_drop_cook", 50, 1500)
+        _cook_drop_slider_row(timings_content, "DC delay", self.app.cook_drop_dc_delay_var, "cook_drop_dc_delay", 0, 200)
+        _cook_drop_slider_row(timings_content, "Pre-close (before TAB)", self.app.cook_drop_pre_close_var, "cook_drop_pre_close", 0, 300)
+        _cook_drop_slider_row(timings_content, "Tab hold", self.app.cook_drop_tab_hold_var, "cook_drop_tab_hold", 20, 150)
+        _cook_drop_slider_row(timings_content, "Close → reconnect", self.app.cook_drop_close_reconnect_var, "cook_drop_close_reconnect", 100, 600)
+        _cook_drop_slider_row(timings_content, "Drag speed", self.app.cook_drop_drag_speed_var, "cook_drop_drag_speed", 3, 25, unit="")
 
     def _init_hidden_variables(self, frame):
         """Initialize hidden variables needed by backend"""
@@ -874,6 +1012,16 @@ class UIBuilder:
         self.app.mine_status_var = tk.StringVar(value="Ready")
         self.app.mine_status_label = ttk.Label(frame, textvariable=self.app.mine_status_var, style='Dim.TLabel')
         self.app.mine_status_label.pack_forget()
+
+        # Cook DC Drop (own timings, reuses mine_drag_start/end, no E pickup)
+        self.app.cook_drop_cook_var = tk.IntVar(value=int(self.app.config.get("cook_drop_cook", 200)))
+        self.app.cook_drop_dc_delay_var = tk.IntVar(value=int(self.app.config.get("cook_drop_dc_delay", 80)))
+        self.app.cook_drop_drag_speed_var = tk.IntVar(value=int(self.app.config.get("cook_drop_drag_speed", 10)))
+        self.app.cook_drop_pre_close_var = tk.IntVar(value=int(self.app.config.get("cook_drop_pre_close", 120)))
+        self.app.cook_drop_tab_hold_var = tk.IntVar(value=int(self.app.config.get("cook_drop_tab_hold", 60)))
+        self.app.cook_drop_close_reconnect_var = tk.IntVar(value=int(self.app.config.get("cook_drop_close_reconnect", 350)))
+        self.app.cook_drop_status_var = tk.StringVar(value="Ready")
+        self.app.cook_drop_hotkey_var = tk.StringVar(value=self.app.config.get("cook_drop_hotkey", ""))
 
         snap_drag_s = self.app.config.get("snap_drag_start", None)
         snap_drag_e = self.app.config.get("snap_drag_end", None)
